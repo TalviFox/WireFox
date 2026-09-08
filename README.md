@@ -1,4 +1,4 @@
-# 🦊 WireFox
+# WireFox
 
 <div align="center">
   <img src="wirefox_icon.png" width="160" alt="WireFox Logo" />
