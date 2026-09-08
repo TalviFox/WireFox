@@ -1,73 +1,107 @@
-# PolyForm Perimeter License 1.0.0
+# 🦊 WireFox
 
-<https://polyformproject.org/licenses/perimeter/1.0.0>
+<div align="center">
+  <img src="wirefox_icon.png" width="160" alt="WireFox Logo" />
+  <br />
+  <strong>Automated Roaming & Watchdog Manager for WireGuard on Windows</strong>
+  <br />
+  <em>Crafted with care by FoxDen Software</em>
+  <p>
+    <a href="LICENSE"><img src="https://img.shields.io/badge/License-PolyForm_Perimeter_1.0.0-blue.svg" alt="License: PolyForm Perimeter 1.0.0" /></a>
+    <img src="https://img.shields.io/badge/.NET-8.0-purple.svg" alt=".NET 8.0" />
+    <img src="https://img.shields.io/badge/Platform-Windows%2010%20%7C%2011-0078D6.svg" alt="Windows 10 / 11" />
+  </p>
+</div>
 
-Required Notice: Copyright (C) 2026 FoxDen Software (https://github.com/FoxDenSoftware/WireFox)
+---
 
-## Acceptance
+## ⚡ The Missing Piece of WireGuard on Windows
 
-In order to get any license under these terms, you must agree to them as both strict obligations and conditions to all your licenses.
+On mobile devices (iOS / Android), WireGuard has native on-demand rules: your phone automatically connects to VPN when you leave your house, and turns off when you're connected to home Wi-Fi. 
 
-## Copyright License
+On Windows, however, laptops have historically lacked intelligent roaming. Users were left with only two choices: manually clicking connect every time they leave the house, or hacking together fragile Task Scheduler scripts.
 
-The licensor grants you a copyright license for the software to do everything you might do with the software that would otherwise infringe the licensor's copyright in it for any permitted purpose.  However, you may only distribute the software according to [Distribution License](#distribution-license) and make changes or new works based on the software according to [Changes and New Works License](#changes-and-new-works-license).
+**WireFox** bridges that gap. It is a lightweight, modern background assistant and system tray daemon for Windows that automates your WireGuard tunnel based on your current network environment.
 
-## Distribution License
+---
 
-The licensor grants you an additional copyright license to distribute copies of the software.  Your license to distribute covers distributing the software with changes and new works permitted by [Changes and New Works License](#changes-and-new-works-license).
+## ✨ Features
 
-## Notices
+- 🔄 **Intelligent Network Roaming**
+  - **Auto-Bypass on Trusted Wi-Fi:** Disconnects VPN when connected to your home or office Wi-Fi for full gigabit LAN speeds.
+  - **Auto-Connect on Untrusted Networks:** Automatically spins up the WireGuard tunnel the moment you connect to an open or untrusted network (coffee shops, hotels, airports).
+- 🛡️ **Gateway MAC (ARP) Anti-Spoofing**
+  - Identifies trusted networks not just by SSID name, but by default gateway MAC address (`iphlpapi.dll` SendARP).
+  - Protects Ethernet connections and guards against rogue Wi-Fi access points spoofing your home SSID.
+- 🐕 **Handshake & Session Watchdog**
+  - Actively polls kernel handshake timestamps via the official `wg.exe` command layer.
+  - Detects silent UDP drops, captive portals, and dead tunnels.
+  - Built-in timer controls: pause protection for 15 minutes or temporarily switch to split-tunnel mode.
+- 💻 **Native Windows Experience**
+  - Built with modern **WPF** and **Mica/Fluent Design** (dark/light themes).
+  - Sits quietly in the Windows System Tray with quick controls.
+  - Native Windows Toast notifications with actionable inline buttons.
+  - Starts silently on Windows boot via elevated Scheduled Task without annoying UAC prompts.
+- 🔒 **Zero Bloat, Zero Telemetry**
+  - No accounts, no background analytics, no ads.
+  - Interacts directly with the official, audited **WireGuardNT** service driver.
 
-You must ensure that anyone who gets a copy of any part of the software from you also gets a copy of these terms or the URL for them above, as well as copies of any plain-text lines beginning with `Required Notice:` that the licensor provided with the software.  For example:
+---
 
-> Required Notice: Copyright (C) 2026 FoxDen Software (https://github.com/FoxDenSoftware/WireFox)
+## 🚀 Quick Start & Installation
 
-## Changes and New Works License
+### Requirements
+- **Windows 10 (version 19041+) or Windows 11**
+- **Official WireGuard for Windows** installed ([wireguard.com/install](https://www.wireguard.com/install/))
 
-The licensor grants you an additional copyright license to make changes and new works based on the software for any permitted purpose.
+### ⚡ One-Line Install (PowerShell)
 
-## Patent License
+Run the following in PowerShell (Administrator recommended):
 
-The licensor grants you a patent license for the software that covers patent claims the licensor can license, or becomes able to license, that you would infringe by using the software.
+```powershell
+irm https://raw.githubusercontent.com/TalviFox/WireFox/main/install.ps1 | iex
+```
 
-## Noncompete
+> This automatically fetches the latest release, installs WireFox to `Program Files`, and adds a Start Menu shortcut.
 
-Any purpose is a permitted purpose, except for providing to others any product that competes with the software.
+### 📦 Manual Download
+1. Download the latest `WireFox.exe` from [Releases](https://github.com/TalviFox/WireFox/releases/latest).
+2. Launch `WireFox.exe` as Administrator (required to manage Windows tunnel services).
+3. Select your tunnel in **Settings** (or import a `.conf` file).
+4. Add your home Wi-Fi or router to **Trusted Networks**.
 
-## Competition
+---
 
-If you use this software to market a product as a substitute for the functionality or value of the software, it competes with the software. A product may compete regardless how it is designed or deployed. For example, a product may compete even if it provides its functionality via any kind of interface (including services, libraries or plug-ins), even if it is ported to a different platform or programming language, and even if it is provided free of charge.
+## 🛠️ Building from Source
 
-## Fair Use
+WireFox is built on **.NET 8.0 Windows Desktop SDK**.
 
-You may have "fair use" rights for the software under the law. These terms do not limit them.
+```powershell
+# Clone the repository
+git clone https://github.com/TalviFox/WireFox.git
+cd WireFox
 
-## No Other Rights
+# Build single-file release executable
+dotnet publish WireFox.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -o publish/
+```
 
-These terms do not allow you to sublicense or transfer any of your licenses to anyone else, or prevent the licensor from granting licenses to anyone else.  These terms do not imply any other licenses.
+Or run `build.bat` in the root directory.
 
-## Patent Defense
+---
 
-If you make any written claim that the software infringes or contributes to infringement of any patent, your patent license for the software granted under these terms ends immediately. If your company makes such a claim, your patent license ends immediately for work on behalf of your company.
+## ⚖️ License
 
-## Violations
+WireFox source code is available under the **[PolyForm Perimeter License 1.0.0](LICENSE)**.
 
-The first time you are notified in writing that you have violated any of these terms, or done anything with the software not covered by your licenses, your licenses can nonetheless continue if you come into full compliance with these terms, and take practical steps to correct past violations, within 32 days of receiving notice.  Otherwise, all your licenses end immediately.
+### What this means:
+- ✅ **Open to inspect, fork, and hack:** You are free to run, study, modify, build, and distribute WireFox for personal, educational, or internal use.
+- 🛡️ **Anti-theft & non-compete protection:** You may not use this software or its source code to provide or market any product or service that competes with WireFox or acts as a commercial substitute for it.
 
-## No Liability
+For full license terms, see the [LICENSE](LICENSE) file or visit [PolyForm Project](https://polyformproject.org/licenses/perimeter/1.0.0).
 
-***As far as the law allows, the software comes as is, without any warranty or condition, and the licensor will not be liable to you for any damages arising out of these terms or the use or nature of the software, under any kind of legal claim.***
+---
 
-## Definitions
+## 🏷️ Trademarks & Attribution
 
-The **licensor** is the individual or entity offering these terms, and the **software** is the software the licensor makes available under these terms.
-
-A **product** can be a good or service, or a combination of them.
-
-**You** refers to the individual or entity agreeing to these terms.
-
-**Your company** is any legal entity, sole proprietorship, or other kind of organization that you work for, plus all organizations that have control over, are under the control of, or are under common control with that organization.  **Control** means ownership of substantially all the assets of an entity, or the power to direct its management and policies by vote, contract, or otherwise.  Control can be direct or indirect.
-
-**Your licenses** are all the licenses granted to you for the software under these terms.
-
-**Use** means anything you do with the software requiring one of your licenses.
+- **WireGuard®** is a registered trademark of **Jason A. Donenfeld**.
+- **WireFox** is an independent companion project developed by **FoxDen Software**. It is not affiliated with, endorsed by, or sponsored by Jason A. Donenfeld or the official WireGuard development team.
