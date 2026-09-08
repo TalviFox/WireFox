@@ -20,7 +20,8 @@ $runningProc = Get-Process -Name "WireFox" -ErrorAction SilentlyContinue | Selec
 if ($runningProc) {
     try {
         $targetExe = $runningProc.MainModule.FileName
-    } catch {
+    }
+    catch {
         $targetExe = (Get-Process -Id $runningProc.Id).Path
     }
 }
@@ -39,7 +40,8 @@ if (-not $targetExe -or -not (Test-Path $targetExe)) {
     $publishPath = Join-Path $PSScriptRoot "publish\WireFox.exe"
     if (Test-Path $localPath) {
         $targetExe = $localPath
-    } elseif (Test-Path $publishPath) {
+    }
+    elseif (Test-Path $publishPath) {
         $targetExe = $publishPath
     }
 }
@@ -73,7 +75,8 @@ Write-Host "[*] Querying official releases from GitHub over TLS ($apiUrl)..." -F
 try {
     $headers = @{ "User-Agent" = "WireFox-Integrity-Auditor" }
     $releases = Invoke-RestMethod -Uri $apiUrl -Headers $headers -UseBasicParsing
-} catch {
+}
+catch {
     Write-Host "[!] Could not query GitHub Releases API: $_" -ForegroundColor Yellow
     Write-Host "    Please ensure you have an active internet connection." -ForegroundColor DarkYellow
     return
@@ -86,11 +89,10 @@ if (-not $releases -or $releases.Count -eq 0) {
 
 $latestRelease = $releases[0]
 $matchedRelease = $null
-$matchedExpectedHash = $null
 
 function Get-ReleaseHash($release) {
-    # Check assets for SHA256SUMS.txt or checksums.txt
-    $sumsAsset = $release.assets | Where-Object { $_.name -match "^(SHA256SUMS|checksums|WireFox.*\.sha256).*\.txt$" -or $_.name -eq "SHA256SUMS.txt" } | Select-Object -First 1
+    # Check assets for SHA256SUMS.txt, checksums.txt, or WireFox.exe.sha256
+    $sumsAsset = $release.assets | Where-Object { $_.name -match "^(SHA256SUMS|checksums|WireFox.*)\.(txt|sha256)$" -or $_.name -eq "WireFox.exe.sha256" } | Select-Object -First 1
     if ($sumsAsset) {
         try {
             $content = Invoke-RestMethod -Uri $sumsAsset.browser_download_url -Headers $headers -UseBasicParsing
@@ -100,7 +102,8 @@ function Get-ReleaseHash($release) {
             if ($content -match "\b([a-fA-F0-9]{64})\b") {
                 return $matches[1].ToLowerInvariant()
             }
-        } catch { }
+        }
+        catch { }
     }
 
     # Check release body for 64-character hex string
@@ -115,7 +118,6 @@ foreach ($rel in $releases) {
     $expectedHash = Get-ReleaseHash $rel
     if ($expectedHash -and $expectedHash -eq $localHash) {
         $matchedRelease = $rel
-        $matchedExpectedHash = $expectedHash
         break
     }
 }
@@ -127,14 +129,16 @@ if ($matchedRelease) {
     if ($matchedRelease.tag_name -eq $latestRelease.tag_name) {
         Write-Host "   [+] VERIFIED: Binary matches the latest official GitHub release ($($matchedRelease.tag_name))." -ForegroundColor Green
         Write-Host "       Integrity: 100% Match • Untampered • Up to date" -ForegroundColor Green
-    } else {
+    }
+    else {
         Write-Host "   [i] VERIFIED (HISTORICAL): Binary matches official release ($($matchedRelease.tag_name))." -ForegroundColor Cyan
         Write-Host "       Integrity: 100% Match • Untampered" -ForegroundColor Cyan
         Write-Host "       Notice: A newer official release ($($latestRelease.tag_name)) is available on GitHub." -ForegroundColor Yellow
     }
-} else {
+}
+else {
     # Check if reported version matches any release tag
-    $verMatch = $releases | Where-Object { $_.tag_name.TrimStart('v','V') -eq $localVersion } | Select-Object -First 1
+    $verMatch = $releases | Where-Object { $_.tag_name.TrimStart('v', 'V') -eq $localVersion } | Select-Object -First 1
     if ($verMatch) {
         $expected = Get-ReleaseHash $verMatch
         Write-Host "   [!] CHECKSUM MISMATCH DETECTED!" -ForegroundColor Red
@@ -142,7 +146,8 @@ if ($matchedRelease) {
         Write-Host "       Expected SHA-256:  $expected" -ForegroundColor Yellow
         Write-Host "       Actual Local Hash: $localHash" -ForegroundColor Yellow
         Write-Host "       WARNING: This binary does not match the official release artifact!" -ForegroundColor Red
-    } else {
+    }
+    else {
         Write-Host "   [*] LOCAL / DEVELOPMENT BUILD" -ForegroundColor Yellow
         Write-Host "       The running binary does not match any public GitHub release hash." -ForegroundColor DarkYellow
         Write-Host "       This is expected for self-compiled, test, or pre-release developer builds." -ForegroundColor DarkYellow

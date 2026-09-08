@@ -58,7 +58,7 @@ try {
     $releaseTag = $release.tag_name
 
     # Try to find checksums in assets
-    $sumsAsset = $release.assets | Where-Object { $_.name -match "^(SHA256SUMS|checksums|WireFox.*\.sha256).*\.txt$" -or $_.name -eq "SHA256SUMS.txt" } | Select-Object -First 1
+    $sumsAsset = $release.assets | Where-Object { $_.name -match "^(SHA256SUMS|checksums|WireFox.*)\.(txt|sha256)$" -or $_.name -eq "WireFox.exe.sha256" } | Select-Object -First 1
     if ($sumsAsset) {
         $checksumText = Invoke-RestMethod -Uri $sumsAsset.browser_download_url -Headers $headers -UseBasicParsing
         if ($checksumText -match "([a-fA-F0-9]{64})\s+.*WireFox\.exe") {
