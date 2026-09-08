@@ -1,0 +1,27 @@
+# Build and publishing outputs
+bin/
+obj/
+publish/
+
+# Visual Studio / Rider / IDE cache
+.vs/
+*.user
+*.userosscache
+*.suo
+*.sln.docstates
+
+# Windows and Local Application Data
+*.log
+*.tmp
+*.bak
+
+# Sensitive Configuration & Tunnel credentials
+*.conf
+*.conf.dpapi
+
+# OS generated files
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+.DS_Store

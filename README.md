@@ -70,6 +70,18 @@ irm https://raw.githubusercontent.com/TalviFox/WireFox/main/install.ps1 | iex
 3. Select your tunnel in **Settings** (or import a `.conf` file).
 4. Add your home Wi-Fi or router to **Trusted Networks**.
 
+### 🔒 Verify Binary Integrity (SHA-256)
+WireFox is open-source and independent. You can audit the integrity of your binary directly against GitHub Releases at any time without commercial code-signing:
+```powershell
+irm https://raw.githubusercontent.com/TalviFox/WireFox/main/verify.ps1 | iex
+```
+
+### 🧹 Clean Uninstall
+WireFox can be removed natively from Windows Settings > **Installed Apps**, directly inside WireFox under **Settings > Clean System Removal**, or via PowerShell:
+```powershell
+irm https://raw.githubusercontent.com/TalviFox/WireFox/main/uninstall.ps1 | iex
+```
+
 ---
 
 ## 🛠️ Building from Source

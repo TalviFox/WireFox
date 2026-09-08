@@ -1,0 +1,22 @@
+# Auto detect text files and perform line normalization
+* text=auto
+
+# C# and XAML files
+*.cs text eol=crlf diff=csharp
+*.xaml text eol=crlf
+*.xml text eol=crlf
+*.csproj text eol=crlf
+*.manifest text eol=crlf
+*.config text eol=crlf
+*.bat text eol=crlf
+
+# Markdown and Docs
+*.md text eol=lf
+*.json text eol=lf
+
+# Binary files
+*.png binary
+*.jpg binary
+*.ico binary
+*.exe binary
+*.dll binary
