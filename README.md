@@ -89,6 +89,14 @@ Or run `build.bat` in the root directory.
 
 ---
 
+## 🤖 Transparency & AI Disclosure
+
+WireFox is developed with the assistance of AI coding tools. In the spirit of open development and personal accountability: **I don't post what I don't run.**
+
+Every feature, script, and build is actively dogfooded, tested, and run on my own daily-driver machines before it is published here.
+
+---
+
 ## ⚖️ License
 
 WireFox source code is available under the **[PolyForm Perimeter License 1.0.0](LICENSE)**.
