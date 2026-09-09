@@ -5,11 +5,14 @@
   <br />
   <strong>Automated Roaming & Watchdog Manager for WireGuard on Windows</strong>
   <br />
+  <em>The WireGuard companion fox you didn't think you'd need.</em>
+  <br />
   <em>Crafted with care by FoxDen Software</em>
   <p>
     <a href="LICENSE"><img src="https://img.shields.io/badge/License-PolyForm_Perimeter_1.0.0-blue.svg" alt="License: PolyForm Perimeter 1.0.0" /></a>
     <img src="https://img.shields.io/badge/.NET-10.0-purple.svg" alt=".NET 10.0" />
     <img src="https://img.shields.io/badge/Platform-Windows%2010%20%7C%2011-0078D6.svg" alt="Windows 10 / 11" />
+    <a href="https://github.com/TalviFox/WireFox/releases"><img src="https://img.shields.io/github/downloads/TalviFox/WireFox/total?color=orange&label=Downloads" alt="GitHub Downloads" /></a>
   </p>
 </div>
 
@@ -87,7 +90,7 @@ irm https://raw.githubusercontent.com/TalviFox/WireFox/main/uninstall.ps1 | iex
 ## 📝 Changelog
 
 ### v1.0.1
-- **Upgraded to .NET 10:** Honestly? It was recently pointed out to us that .NET 8 reaches its End of Support in November 2026. To stay ahead of the curve and ensure long-term stability, we've proactively migrated the target framework to .NET 10 LTS. 
+- **Upgraded to .NET 10:** Honestly? It was recently pointed out to me that .NET 8 reaches its End of Support in November 2026. To stay ahead of the curve and ensure long-term stability, I've proactively migrated the target framework to .NET 10 LTS. 
 
 ---
 
