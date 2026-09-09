@@ -89,6 +89,9 @@ irm https://raw.githubusercontent.com/TalviFox/WireFox/main/uninstall.ps1 | iex
 
 ## 📝 Changelog
 
+### v1.0.2
+- **Fixed Zombie Tunnels:** Fixed an issue where a tunnel could be left indefinitely active if the underlying Windows service wasn't properly registered with the Service Control Manager. Now gracefully falls back to explicit interface uninstallation.
+
 ### v1.0.1
 - **Upgraded to .NET 10:** Honestly? It was recently pointed out to me that .NET 8 reaches its End of Support in November 2026. To stay ahead of the curve and ensure long-term stability, I've proactively migrated the target framework to .NET 10 LTS. 
 

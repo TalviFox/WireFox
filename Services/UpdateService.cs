@@ -401,12 +401,24 @@ Start-Sleep -Seconds 1
 Get-Process -Name 'WireFox' -ErrorAction SilentlyContinue | Stop-Process -Force
 Start-Sleep -Milliseconds 500
 
-try {{
-    Copy-Item -Path '{tempExe}' -Destination '{currentExe}' -Force
-    Remove-Item -Path '{tempExe}' -Force -ErrorAction SilentlyContinue
-    Start-Process -FilePath '{currentExe}'
-}} catch {{
-    [System.Windows.Forms.MessageBox]::Show('Update failed: ' + $_.Exception.Message, 'WireFox Update Error')
+$maxRetries = 10
+$retryCount = 0
+$success = $false
+
+while (-not $success -and $retryCount -lt $maxRetries) {{
+    try {{
+        Copy-Item -Path '{tempExe}' -Destination '{currentExe}' -Force -ErrorAction Stop
+        Remove-Item -Path '{tempExe}' -Force -ErrorAction SilentlyContinue
+        Start-Process -FilePath '{currentExe}'
+        $success = $true
+    }} catch {{
+        $retryCount++
+        Start-Sleep -Milliseconds 500
+    }}
+}}
+
+if (-not $success) {{
+    [System.Windows.Forms.MessageBox]::Show('Update failed after multiple attempts. The file is still in use.', 'WireFox Update Error')
 }}
 ";
                 await File.WriteAllTextAsync(updateScript, scriptContent);

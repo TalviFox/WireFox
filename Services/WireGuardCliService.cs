@@ -447,23 +447,31 @@ namespace WireFox.Services
                     // the error dialog: "The specified service does not exist as an installed service."
                     if (existingService == null)
                     {
-                        LoggingService.Instance.Info("WireGuardCli", 
-                            $"Service '{serviceName}' does not exist as an installed Windows service. Nothing to stop/uninstall.");
-                        return true;
+                        if (!IsTunnelServiceRunning(interfaceName))
+                        {
+                            LoggingService.Instance.Info("WireGuardCli", 
+                                $"Service '{serviceName}' does not exist as an installed Windows service. Nothing to stop/uninstall.");
+                            return true;
+                        }
+                        else
+                        {
+                            LoggingService.Instance.Info("WireGuardCli", 
+                                $"Service '{serviceName}' does not exist, but tunnel interface is active. Proceeding to cleanup.");
+                        }
                     }
-
-                    if (existingService.Status == ServiceControllerStatus.Stopped)
+                    else
                     {
-                        LoggingService.Instance.Info("WireGuardCli", $"Service '{serviceName}' is already stopped.");
-                        return true;
-                    }
-
-                    if (existingService.CanStop)
-                    {
-                        LoggingService.Instance.Info("WireGuardCli", $"Stopping service '{serviceName}'...");
-                        existingService.Stop();
-                        existingService.WaitForStatus(ServiceControllerStatus.Stopped, TimeSpan.FromSeconds(5));
-                        LoggingService.Instance.Success("WireGuardCli", $"Service '{serviceName}' stopped.");
+                        if (existingService.Status == ServiceControllerStatus.Stopped)
+                        {
+                            LoggingService.Instance.Info("WireGuardCli", $"Service '{serviceName}' is already stopped.");
+                        }
+                        else if (existingService.CanStop)
+                        {
+                            LoggingService.Instance.Info("WireGuardCli", $"Stopping service '{serviceName}'...");
+                            existingService.Stop();
+                            existingService.WaitForStatus(ServiceControllerStatus.Stopped, TimeSpan.FromSeconds(5));
+                            LoggingService.Instance.Success("WireGuardCli", $"Service '{serviceName}' stopped.");
+                        }
                     }
 
                     // If still running or if we wish to clean up the service

@@ -1,4 +1,4 @@
-# WireFox Automated Release Script
+﻿# WireFox Automated Release Script
 # https://github.com/TalviFox/WireFox
 # Usage: .\release.ps1 -Version "1.1.0"
 
@@ -163,7 +163,8 @@ $releaseNotesTemplate = @"
 WireFox bridges the missing link of WireGuard on Windows: intelligent background roaming and kernel-level tunnel watchdog protection.
 
 ## 📝 What's New in v$cleanVersion
-- Add a bullet point here about what changed!
+- **Fixed Zombie Tunnels:** Fixed an issue where a tunnel could be left indefinitely active.
+- **Fixed Updater Locking:** Added a retry loop to the in-place updater to wait for file locks to release, preventing Access Denied errors.
 
 ## ✨ Highlights
 - 🔄 **Auto-Roaming:** Bypasses VPN on trusted home/office Wi-Fi for full gigabit LAN speeds; automatically connects on untrusted networks.
@@ -183,7 +184,7 @@ ${tripleBt}
 ## 🔒 Checksums & Binary Verification
 | File | SHA-256 Checksum |
 | :--- | :--- |
-| **WireFox.exe** | `${bt}$hash${bt}` |
+| **WireFox.exe** | ${bt}$hash${bt} |
 
 Verify integrity before running (PowerShell):
 ${tripleBt}powershell
