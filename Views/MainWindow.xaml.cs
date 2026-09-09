@@ -262,10 +262,13 @@ namespace WireFox.Views
         {
             try
             {
+                var embedded = LoadIconNamed("wirefox.ico");
+                if (embedded != null) return embedded;
+
                 var extracted = Environment.ProcessPath != null ? System.Drawing.Icon.ExtractAssociatedIcon(Environment.ProcessPath) : null;
                 if (extracted != null) return extracted;
 
-                return LoadIconNamed("wirefox.ico") ?? LoadIconNamed("wgm.ico");
+                return LoadIconNamed("wgm.ico");
             }
             catch { }
 
