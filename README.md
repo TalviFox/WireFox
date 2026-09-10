@@ -89,6 +89,14 @@ irm https://raw.githubusercontent.com/TalviFox/WireFox/main/uninstall.ps1 | iex
 
 ## 📝 Changelog
 
+### v1.0.3
+- **Security Hardening & Least-Privilege Guardrails:**
+  - **Fail-Closed In-Place Updates:** Enforced strict cryptographic SHA-256 integrity verification before executing updates, blocking untrusted or unverified binaries.
+  - **Hardened Update Staging:** In-place updates now stage exclusively inside protected `Program Files\WireFox\Updates` instead of user-writable `%TEMP%` to eliminate local privilege escalation risks.
+  - **Safe Interface Discovery:** Tunnel `.conf` discovery now enforces strict interface name validation and structural checks to prevent arbitrary file reading.
+  - **Portable Mode Guardrails:** Running portably outside `Program Files` now alerts the user, blocks registering elevated scheduled tasks from untrusted directories, and provides a 1-click install to `Program Files`.
+  - **Installed Apps Version Sync:** Automatically synchronizes the registered Windows DisplayVersion upon launch to eliminate version drift in Windows Settings.
+
 ### v1.0.2
 - **Fixed Zombie Tunnels:** Fixed an issue where a tunnel could be left indefinitely active if the underlying Windows service wasn't properly registered with the Service Control Manager. Now gracefully falls back to explicit interface uninstallation.
 
