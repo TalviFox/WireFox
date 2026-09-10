@@ -17,11 +17,13 @@ $isAdmin = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIden
 if (-not $isAdmin) {
     Write-Host "`n[!] Administrator privileges are required to clean up scheduled tasks and Program Files." -ForegroundColor Yellow
     Write-Host "[*] Requesting elevation..." -ForegroundColor Cyan
-    $script = if ($PSCommandPath) { $PSCommandPath } else { "https://raw.githubusercontent.com/TalviFox/WireFox/main/uninstall.ps1" }
-    if ($PSCommandPath) {
+    if ($PSCommandPath -and (Test-Path $PSCommandPath)) {
         Start-Process powershell -Verb RunAs -ArgumentList "-NoProfile -ExecutionPolicy Bypass -File `"$PSCommandPath`""
     } else {
-        Start-Process powershell -Verb RunAs -ArgumentList "-NoProfile -ExecutionPolicy Bypass -Command `"irm $script | iex`""
+        $tempScript = Join-Path $env:TEMP "WireFox_uninstall.ps1"
+        $uninstallerUrl = "https://raw.githubusercontent.com/TalviFox/WireFox/main/uninstall.ps1"
+        Invoke-WebRequest -Uri $uninstallerUrl -OutFile $tempScript -UseBasicParsing
+        Start-Process powershell -Verb RunAs -ArgumentList "-NoProfile -ExecutionPolicy Bypass -File `"$tempScript`""
     }
     return
 }

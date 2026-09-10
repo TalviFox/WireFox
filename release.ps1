@@ -1,4 +1,4 @@
-﻿# WireFox Automated Release Script
+# WireFox Automated Release Script
 # https://github.com/TalviFox/WireFox
 # Usage: .\release.ps1 -Version "1.1.0"
 
@@ -90,20 +90,43 @@ if (-not (Test-Path $targetExe)) {
 }
 
 # 5. Calculate SHA-256 Hash and generate SHA256SUMS.txt
-Write-Host "[*] Calculating cryptographic SHA-256 hash..." -ForegroundColor Cyan
+Write-Host "[*] Calculating cryptographic SHA-256 hashes..." -ForegroundColor Cyan
 $hash = (Get-FileHash -Path $targetExe -Algorithm SHA256).Hash.ToLowerInvariant()
 $fileSizeMb = [math]::Round(((Get-Item $targetExe).Length / 1MB), 2)
 
+# Copy companion scripts to publish directory
+$uninstallSrc = Join-Path $root "uninstall.ps1"
+$verifySrc = Join-Path $root "verify.ps1"
+$checksumEntries = [System.Collections.Generic.List[string]]::new()
+$checksumEntries.Add("$hash  WireFox.exe")
+
+$uninstallHash = $null
+if (Test-Path $uninstallSrc) {
+    $dest = Join-Path $publishDir "uninstall.ps1"
+    Copy-Item $uninstallSrc -Destination $dest -Force
+    $uninstallHash = (Get-FileHash -Path $dest -Algorithm SHA256).Hash.ToLowerInvariant()
+    $checksumEntries.Add("$uninstallHash  uninstall.ps1")
+}
+
+$verifyHash = $null
+if (Test-Path $verifySrc) {
+    $dest = Join-Path $publishDir "verify.ps1"
+    Copy-Item $verifySrc -Destination $dest -Force
+    $verifyHash = (Get-FileHash -Path $dest -Algorithm SHA256).Hash.ToLowerInvariant()
+    $checksumEntries.Add("$verifyHash  verify.ps1")
+}
+
 $checksumsFile = Join-Path $publishDir "SHA256SUMS.txt"
-$checksumEntry = "$hash  WireFox.exe"
-Set-Content -Path $checksumsFile -Value $checksumEntry -Encoding ASCII
+Set-Content -Path $checksumsFile -Value ($checksumEntries -join "`r`n") -Encoding ASCII
 
 # Also write individual hash file for convenience
 $hashFile = Join-Path $publishDir "WireFox.exe.sha256"
 Set-Content -Path $hashFile -Value $hash -Encoding ASCII
 
-Write-Host "[+] Binary SHA-256: $hash" -ForegroundColor Green
-Write-Host "[+] Checksums file: $checksumsFile" -ForegroundColor Green
+Write-Host "[+] Binary SHA-256:      $hash" -ForegroundColor Green
+if ($uninstallHash) { Write-Host "[+] Uninstaller SHA-256: $uninstallHash" -ForegroundColor Green }
+if ($verifyHash) { Write-Host "[+] Verifier SHA-256:    $verifyHash" -ForegroundColor Green }
+Write-Host "[+] Checksums file:      $checksumsFile" -ForegroundColor Green
 
 # 6. Git Commit & Tagging (if not DryRun or SkipGit)
 if (-not $DryRun -and -not $SkipGit) {
@@ -138,6 +161,8 @@ Write-Host @"
   | File | SHA-256 Checksum |
   | :--- | :--- |
   | **WireFox.exe** | ${bt}$hash${bt} |
+  | **uninstall.ps1** | ${bt}$uninstallHash${bt} |
+  | **verify.ps1** | ${bt}$verifyHash${bt} |
 
   Verify before running (PowerShell):
   ${tripleBt}powershell
@@ -147,8 +172,10 @@ Write-Host @"
 
   📦 GITHUB RELEASE ASSETS TO UPLOAD:
   1. publish\WireFox.exe
-  2. publish\SHA256SUMS.txt
-  3. publish\release_notes.md (Use this for the GitHub release body!)
+  2. publish\uninstall.ps1
+  3. publish\verify.ps1
+  4. publish\SHA256SUMS.txt
+  5. publish\release_notes.md (Use this for the GitHub release body!)
 
   🚀 NEXT STEP (GIT PUSH):
   git push origin HEAD --tags
@@ -157,23 +184,22 @@ Write-Host @"
 
 # 8. Generate release_notes.md template
 $releaseNotesPath = Join-Path $publishDir "release_notes.md"
+$foxEmoji = [char]::ConvertFromUtf32(0x1F98A)
+$memoEmoji = [char]::ConvertFromUtf32(0x1F4DD)
+$lockEmoji = [char]::ConvertFromUtf32(0x1F512)
+
 $releaseNotesTemplate = @"
-# 🦊 WireFox v$cleanVersion
+# $foxEmoji WireFox v$cleanVersion
 
 WireFox bridges the missing link of WireGuard on Windows: intelligent background roaming and kernel-level tunnel watchdog protection.
 
-## 📝 What's New in v$cleanVersion
-- **Fixed Zombie Tunnels:** Fixed an issue where a tunnel could be left indefinitely active.
-- **Fixed Updater Locking:** Added a retry loop to the in-place updater to wait for file locks to release, preventing Access Denied errors.
+## $memoEmoji What's New in v$cleanVersion
 
-## ✨ Highlights
-- 🔄 **Auto-Roaming:** Bypasses VPN on trusted home/office Wi-Fi for full gigabit LAN speeds; automatically connects on untrusted networks.
-- 🛡️ **Gateway ARP Anti-Spoofing:** Identifies trusted networks via default gateway MAC addresses (iphlpapi.dll) to prevent SSID spoofing.
-- 🐕 **Handshake Watchdog:** Actively polls kernel timestamps (wg.exe) to detect silent UDP drops, captive portals, and dead tunnels.
-- 💻 **Native Windows Experience:** Built with modern Fluent/Mica design, Windows System Tray integration, and actionable Toast notifications.
-- 🔒 **Zero Bloat, Zero Telemetry:** No user tracking, no accounts, and direct interaction with the audited WireGuardNT driver.
-
-## ⚡ Quick Install / Upgrade (PowerShell)
+- **Fail-Closed Security Enforcement:** In-place updates strictly validate SHA-256 cryptographic hashes before execution, blocking unverified or tampered binaries.
+- **Hardened Update Staging:** In-place updates now stage exclusively inside protected ``Program Files`` to prevent unprivileged payload injection.
+- **Safe Interface Discovery:** Tunnel configuration discovery validates interface naming and parses ``[Interface]`` headers to prevent arbitrary file reading.
+- **Portable Security Guardrails:** Portable builds guard against registering elevated scheduled tasks from untrusted directories and offer 1-click migration to ``Program Files``.
+- **Installed Apps Auto-Sync:** WireFox automatically synchronizes its registered display version in Windows Installed Apps upon startup.
 
 Run PowerShell as Administrator to install or seamlessly upgrade in place:
 
@@ -181,16 +207,20 @@ ${tripleBt}powershell
 irm https://raw.githubusercontent.com/TalviFox/WireFox/main/install.ps1 | iex
 ${tripleBt}
 
-## 🔒 Checksums & Binary Verification
+## $lockEmoji Checksums & Binary Verification
+
 | File | SHA-256 Checksum |
 | :--- | :--- |
 | **WireFox.exe** | ${bt}$hash${bt} |
+| **uninstall.ps1** | ${bt}$uninstallHash${bt} |
+| **verify.ps1** | ${bt}$verifyHash${bt} |
 
 Verify integrity before running (PowerShell):
+
 ${tripleBt}powershell
 irm https://raw.githubusercontent.com/TalviFox/WireFox/main/verify.ps1 | iex
 ${tripleBt}
 "@
 
-Set-Content -Path $releaseNotesPath -Value $releaseNotesTemplate -Encoding UTF8
+[System.IO.File]::WriteAllText($releaseNotesPath, $releaseNotesTemplate, [System.Text.Encoding]::UTF8)
 Write-Host "[+] Draft release notes saved to $releaseNotesPath" -ForegroundColor Green

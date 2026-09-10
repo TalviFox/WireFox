@@ -224,9 +224,18 @@ namespace WireFox.Services
                         foreach (var file in Directory.GetFiles(folder, "*.conf", SearchOption.TopDirectoryOnly))
                         {
                             string name = Path.GetFileNameWithoutExtension(file);
-                            if (!string.IsNullOrWhiteSpace(name))
+                            if (IsValidInterfaceName(name))
                             {
-                                tunnels.Add(name);
+                                // Sanity check: Ensure candidate file contains valid [Interface] header
+                                try
+                                {
+                                    var firstLines = File.ReadLines(file).Take(15);
+                                    if (firstLines.Any(l => l.Trim().StartsWith("[Interface]", StringComparison.OrdinalIgnoreCase)))
+                                    {
+                                        tunnels.Add(name);
+                                    }
+                                }
+                                catch { }
                             }
                         }
                     }

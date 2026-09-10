@@ -29,6 +29,33 @@ namespace WireFox
 
             base.OnStartup(e);
 
+            // Self-healing: Synchronize Windows Installed Apps DisplayVersion if registered
+            SyncInstalledAppsDisplayVersion();
+
+            // Portable Mode Check (Option A: Prompt on first launch outside Program Files)
+            if (!StartupService.IsRunningFromProgramFiles && !ConfigManager.Instance.Config.HasPromptedPortableInstall)
+            {
+                ConfigManager.Instance.Config.HasPromptedPortableInstall = true;
+                ConfigManager.Instance.SaveConfig();
+
+                var promptResult = System.Windows.MessageBox.Show(
+                    "WireFox detected that it is running in portable mode outside Program Files.\n\n" +
+                    "• Click 'Yes' to Install to Program Files (Recommended for 24/7 background roaming and secure auto-start).\n\n" +
+                    "• Click 'No' to Continue in Portable Mode (Testing / Disposable system: Auto-start and in-place updates are disabled for security).",
+                    "WireFox - Installation Option",
+                    MessageBoxButton.YesNo,
+                    MessageBoxImage.Question);
+
+                if (promptResult == MessageBoxResult.Yes)
+                {
+                    if (StartupService.InstallToProgramFiles())
+                    {
+                        Shutdown();
+                        return;
+                    }
+                }
+            }
+
             var theme = ConfigManager.Instance.Config.Theme?.ToLowerInvariant() ?? "system";
             if (theme == "light")
                 Wpf.Ui.Appearance.ApplicationThemeManager.Apply(Wpf.Ui.Appearance.ApplicationTheme.Light);
@@ -49,6 +76,26 @@ namespace WireFox
                 await System.Threading.Tasks.Task.Delay(TimeSpan.FromSeconds(15));
                 await UpdateService.Instance.CheckForUpdatesAsync(isManual: false);
             });
+        }
+
+        private static void SyncInstalledAppsDisplayVersion()
+        {
+            try
+            {
+                using var key = Microsoft.Win32.Registry.LocalMachine.OpenSubKey(
+                    @"Software\Microsoft\Windows\CurrentVersion\Uninstall\WireFox", writable: true);
+                if (key != null)
+                {
+                    string currentVer = UpdateService.Instance.GetCurrentVersionString();
+                    string? existingVer = key.GetValue("DisplayVersion") as string;
+                    if (!string.Equals(existingVer, currentVer, StringComparison.OrdinalIgnoreCase))
+                    {
+                        key.SetValue("DisplayVersion", currentVer);
+                        LoggingService.Instance.Info("App", $"Synchronized Windows Installed Apps version to {currentVer}.");
+                    }
+                }
+            }
+            catch { }
         }
 
         private void OnDispatcherUnhandledException(object sender, DispatcherUnhandledExceptionEventArgs e)

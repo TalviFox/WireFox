@@ -57,6 +57,9 @@ namespace WireFox.Models
         [JsonPropertyName("ignored_update_version")]
         public string? IgnoredUpdateVersion { get; set; }
 
+        [JsonPropertyName("has_prompted_portable_install")]
+        public bool HasPromptedPortableInstall { get; set; } = false;
+
         public TunnelProfile GetProfile(string? tunnelName)
         {
             string key = string.IsNullOrWhiteSpace(tunnelName)

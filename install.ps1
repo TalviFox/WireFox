@@ -17,8 +17,16 @@ $isAdmin = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIden
 if (-not $isAdmin) {
     Write-Host "`n[!] Administrator privileges are required to install WireFox and control WireGuard services." -ForegroundColor Yellow
     Write-Host "[*] Requesting elevation..." -ForegroundColor Cyan
-    $installerUrl = "https://raw.githubusercontent.com/TalviFox/WireFox/main/install.ps1"
-    Start-Process powershell -Verb RunAs -ArgumentList "-NoProfile -ExecutionPolicy Bypass -Command `"irm $installerUrl | iex`""
+    if ($PSCommandPath -and (Test-Path $PSCommandPath)) {
+        Start-Process powershell -Verb RunAs -ArgumentList "-NoProfile -ExecutionPolicy Bypass -File `"$PSCommandPath`""
+    } else {
+        $tempStaging = Join-Path $env:TEMP "WireFox_Installer"
+        if (-not (Test-Path $tempStaging)) { New-Item -ItemType Directory -Path $tempStaging -Force | Out-Null }
+        $tempScript = Join-Path $tempStaging "install.ps1"
+        $installerUrl = "https://raw.githubusercontent.com/TalviFox/WireFox/main/install.ps1"
+        Invoke-WebRequest -Uri $installerUrl -OutFile $tempScript -UseBasicParsing
+        Start-Process powershell -Verb RunAs -ArgumentList "-NoProfile -ExecutionPolicy Bypass -File `"$tempScript`""
+    }
     return
 }
 
@@ -49,8 +57,8 @@ $repo = "TalviFox/WireFox"
 $expectedHash = $null
 $releaseTag = "v1.0.0"
 
-$localProj = Join-Path $PSScriptRoot "WireFox.csproj"
-if (Test-Path $localProj) {
+$localProj = if ($PSScriptRoot) { Join-Path $PSScriptRoot "WireFox.csproj" } else { $null }
+if ($localProj -and (Test-Path $localProj)) {
     Write-Host "[*] Local source code detected. Building locally instead of downloading..." -ForegroundColor Cyan
     $publishDir = Join-Path $PSScriptRoot "publish"
     
@@ -147,17 +155,36 @@ Copy-Item -Path $stagingExe -Destination $targetExe -Force
 Remove-Item -Path $stagingExe -Force -ErrorAction SilentlyContinue
 Write-Host "[+] Installed to: $targetExe" -ForegroundColor Green
 
-# 8. Deploy uninstaller script
-$uninstallerUrl = "https://raw.githubusercontent.com/$repo/main/uninstall.ps1"
+# 8. Deploy companion scripts (uninstaller & integrity auditor)
 $uninstallerTarget = Join-Path $installDir "uninstall.ps1"
-try {
-    Invoke-WebRequest -Uri $uninstallerUrl -OutFile $uninstallerTarget -UseBasicParsing
-    Write-Host "[+] Uninstaller script ready: $uninstallerTarget" -ForegroundColor Green
-} catch {
-    # If offline / local development, try to copy local uninstall.ps1
-    $localUninstall = Join-Path $PSScriptRoot "uninstall.ps1"
-    if (Test-Path $localUninstall) {
-        Copy-Item -Path $localUninstall -Destination $uninstallerTarget -Force
+$verifierTarget = Join-Path $installDir "verify.ps1"
+
+$localUninstall = if ($PSScriptRoot) { Join-Path $PSScriptRoot "uninstall.ps1" } else { $null }
+$localVerifier = if ($PSScriptRoot) { Join-Path $PSScriptRoot "verify.ps1" } else { $null }
+
+if ($localUninstall -and (Test-Path $localUninstall)) {
+    Copy-Item -Path $localUninstall -Destination $uninstallerTarget -Force
+    Write-Host "[+] Local uninstaller script deployed: $uninstallerTarget" -ForegroundColor Green
+} else {
+    try {
+        $uninstallerUrl = "https://raw.githubusercontent.com/$repo/main/uninstall.ps1"
+        Invoke-WebRequest -Uri $uninstallerUrl -OutFile $uninstallerTarget -UseBasicParsing
+        Write-Host "[+] Uninstaller script deployed: $uninstallerTarget" -ForegroundColor Green
+    } catch {
+        Write-Host "[!] Could not deploy uninstaller script: $_" -ForegroundColor Yellow
+    }
+}
+
+if ($localVerifier -and (Test-Path $localVerifier)) {
+    Copy-Item -Path $localVerifier -Destination $verifierTarget -Force
+    Write-Host "[+] Local integrity auditor deployed: $verifierTarget" -ForegroundColor Green
+} else {
+    try {
+        $verifierUrl = "https://raw.githubusercontent.com/$repo/main/verify.ps1"
+        Invoke-WebRequest -Uri $verifierUrl -OutFile $verifierTarget -UseBasicParsing
+        Write-Host "[+] Integrity auditor script deployed: $verifierTarget" -ForegroundColor Green
+    } catch {
+        Write-Host "[!] Could not deploy integrity auditor script: $_" -ForegroundColor Yellow
     }
 }
 

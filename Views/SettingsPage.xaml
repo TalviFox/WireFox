@@ -278,6 +278,36 @@
                           HorizontalAlignment="Right" />
             </ui:CardControl>
 
+            <!-- Portable Mode Security Notice & Install Card -->
+            <ui:Card Padding="16" Margin="0,0,0,12"
+                     Background="{DynamicResource CardBackgroundFillColorSecondaryBrush}"
+                     BorderBrush="{DynamicResource SystemAccentColorPrimaryBrush}"
+                     BorderThickness="1"
+                     Visibility="{Binding IsPortableMode, Converter={StaticResource BoolToVisConverter}}">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <ui:SymbolIcon Symbol="Info24" FontSize="20" Margin="0,0,14,0" VerticalAlignment="Center" Foreground="{DynamicResource SystemAccentColorPrimaryBrush}" />
+                    <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="0,0,12,0">
+                        <ui:TextBlock Text="Running in Portable Mode" FontWeight="SemiBold" FontSize="13" />
+                        <ui:TextBlock Text="For Windows security, elevated auto-start and in-place updates require installation to Program Files." 
+                                      FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="0,2,0,0" TextWrapping="Wrap" />
+                    </StackPanel>
+                    <ui:Button Grid.Column="2"
+                               Appearance="Primary"
+                               Content="Install to Program Files"
+                               Command="{Binding InstallToProgramFilesCommand}"
+                               VerticalAlignment="Center">
+                        <ui:Button.Icon>
+                            <ui:SymbolIcon Symbol="ArrowDownload24" />
+                        </ui:Button.Icon>
+                    </ui:Button>
+                </Grid>
+            </ui:Card>
+
             <!-- Start with Windows -->
             <ui:CardControl Padding="16" Margin="0,0,0,12">
                 <ui:CardControl.Header>
@@ -294,7 +324,7 @@
                         </StackPanel>
                     </Grid>
                 </ui:CardControl.Header>
-                <ui:ToggleSwitch IsChecked="{Binding StartWithWindows, Mode=TwoWay}" HorizontalAlignment="Right" />
+                <ui:ToggleSwitch IsChecked="{Binding StartWithWindows, Mode=TwoWay}" IsEnabled="{Binding CanEnableStartup}" HorizontalAlignment="Right" />
             </ui:CardControl>
 
             <!-- Start Minimized -->

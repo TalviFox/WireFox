@@ -167,6 +167,17 @@ namespace WireFox.ViewModels
             get => _startWithWindows;
             set
             {
+                if (value && !StartupService.IsRunningFromProgramFiles)
+                {
+                    System.Windows.MessageBox.Show(
+                        "Start with Windows is disabled in portable mode to prevent privilege escalation.\n\nPlease click 'Install to Program Files' first.",
+                        "Portable Mode Notice",
+                        System.Windows.MessageBoxButton.OK,
+                        System.Windows.MessageBoxImage.Information);
+                    OnPropertyChanged(nameof(StartWithWindows));
+                    return;
+                }
+
                 if (SetProperty(ref _startWithWindows, value))
                 {
                     StartupService.SetStartup(value);
@@ -228,6 +239,10 @@ namespace WireFox.ViewModels
         public string LocalHash => UpdateService.Instance.GetLocalExecutableHash();
         public string ShortHash => LocalHash.Length > 16 ? $"{LocalHash[..8]}...{LocalHash[^8..]}" : LocalHash;
 
+        public bool IsRunningFromProgramFiles => StartupService.IsRunningFromProgramFiles;
+        public bool IsPortableMode => !StartupService.IsRunningFromProgramFiles;
+        public bool CanEnableStartup => StartupService.IsRunningFromProgramFiles;
+
         public ICommand SaveSettingsCommand { get; }
         public ICommand RefreshTunnelsCommand { get; }
         public ICommand BrowseConfigFileCommand { get; }
@@ -240,6 +255,7 @@ namespace WireFox.ViewModels
         public ICommand RunAuditCommand { get; }
         public ICommand CopyHashCommand { get; }
         public ICommand UninstallCommand { get; }
+        public ICommand InstallToProgramFilesCommand { get; }
 
         public SettingsViewModel()
         {
@@ -255,6 +271,7 @@ namespace WireFox.ViewModels
             RunAuditCommand = new RelayCommand(() => UpdateService.Instance.LaunchExternalAuditConsole());
             CopyHashCommand = new RelayCommand(CopyHashToClipboard);
             UninstallCommand = new RelayCommand(ExecuteUninstall);
+            InstallToProgramFilesCommand = new RelayCommand(ExecuteInstallToProgramFiles);
 
             LoadSettings();
             RefreshAvailableTunnels();
@@ -497,6 +514,23 @@ namespace WireFox.ViewModels
             catch { }
         }
 
+        private void ExecuteInstallToProgramFiles()
+        {
+            var result = System.Windows.MessageBox.Show(
+                "Install WireFox to Program Files?\n\nThis enables secure automatic startup with Windows, seamless in-place updates, and registers WireFox in Windows Installed Apps.",
+                "Install WireFox",
+                System.Windows.MessageBoxButton.YesNo,
+                System.Windows.MessageBoxImage.Question);
+
+            if (result == System.Windows.MessageBoxResult.Yes)
+            {
+                if (!StartupService.InstallToProgramFiles())
+                {
+                    System.Windows.MessageBox.Show("Installation failed. Please verify Administrator privileges.", "Error", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
+                }
+            }
+        }
+
         private void ExecuteUninstall()
         {
             var result = System.Windows.MessageBox.Show(
@@ -514,17 +548,33 @@ namespace WireFox.ViewModels
                     ? programFilesUninstall
                     : Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "uninstall.ps1");
 
-                string command = File.Exists(script)
-                    ? $"& '{script}'"
-                    : "irm https://raw.githubusercontent.com/TalviFox/WireFox/main/uninstall.ps1 | iex";
-
-                var psi = new ProcessStartInfo
+                ProcessStartInfo psi;
+                if (File.Exists(script))
                 {
-                    FileName = "powershell.exe",
-                    Arguments = $"-NoProfile -ExecutionPolicy Bypass -Command \"{command}\"",
-                    UseShellExecute = true,
-                    Verb = "runas"
-                };
+                    psi = new ProcessStartInfo
+                    {
+                        FileName = "powershell.exe",
+                        Arguments = $"-NoProfile -ExecutionPolicy Bypass -File \"{script}\"",
+                        UseShellExecute = true,
+                        Verb = "runas"
+                    };
+                }
+                else
+                {
+                    // Safe download to file instead of piping to iex
+                    string tempScript = Path.Combine(Path.GetTempPath(), "WireFox_uninstall.ps1");
+                    string downloadCmd = $"Write-Host 'Fetching official WireFox uninstaller from GitHub...' -ForegroundColor Cyan; " +
+                                         $"Invoke-WebRequest -Uri 'https://raw.githubusercontent.com/TalviFox/WireFox/main/uninstall.ps1' -OutFile '{tempScript}' -UseBasicParsing; " +
+                                         $"& '{tempScript}'";
+
+                    psi = new ProcessStartInfo
+                    {
+                        FileName = "powershell.exe",
+                        Arguments = $"-NoProfile -ExecutionPolicy Bypass -Command \"{downloadCmd}\"",
+                        UseShellExecute = true,
+                        Verb = "runas"
+                    };
+                }
 
                 Process.Start(psi);
                 System.Windows.Application.Current.Shutdown();

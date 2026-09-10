@@ -358,10 +358,20 @@ namespace WireFox.Services
 
                 string? expectedHash = await ExtractExpectedHashForRelease(release);
 
-                string tempDir = Path.Combine(Path.GetTempPath(), "WireFox_Update");
-                Directory.CreateDirectory(tempDir);
-                string tempExe = Path.Combine(tempDir, "WireFox.exe.tmp");
-                string updateScript = Path.Combine(tempDir, "apply_update.ps1");
+                if (string.IsNullOrEmpty(expectedHash))
+                {
+                    throw new InvalidOperationException($"Security Verification Error: Official SHA-256 checksum not found in release metadata for {release.TagName}.\nUpdate aborted to prevent executing unverified binaries.");
+                }
+
+                // Target install location
+                string currentExe = Environment.ProcessPath ?? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), "WireFox", "WireFox.exe");
+                string installDir = Path.GetDirectoryName(currentExe) ?? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), "WireFox");
+
+                // Secure update staging in protected app directory instead of world-writable user %TEMP%
+                string updateDir = Path.Combine(installDir, "Updates");
+                Directory.CreateDirectory(updateDir);
+                string tempExe = Path.Combine(updateDir, "WireFox.exe.tmp");
+                string updateScript = Path.Combine(updateDir, "apply_update.ps1");
 
                 progressReporter?.Report($"Downloading {release.TagName} ({exeAsset.Size / 1024 / 1024:F1} MB)...");
                 using (var response = await _httpClient.GetAsync(exeAsset.BrowserDownloadUrl, HttpCompletionOption.ResponseHeadersRead))
@@ -376,23 +386,14 @@ namespace WireFox.Services
                 byte[] downloadedBytes = await File.ReadAllBytesAsync(tempExe);
                 string actualHash = Convert.ToHexString(SHA256.HashData(downloadedBytes)).ToLowerInvariant();
 
-                if (!string.IsNullOrEmpty(expectedHash))
+                if (!string.Equals(actualHash, expectedHash, StringComparison.OrdinalIgnoreCase))
                 {
-                    if (!string.Equals(actualHash, expectedHash, StringComparison.OrdinalIgnoreCase))
-                    {
-                        File.Delete(tempExe);
-                        throw new InvalidOperationException($"SHA-256 verification FAILED!\nExpected: {expectedHash}\nActual: {actualHash}");
-                    }
-                    progressReporter?.Report("SHA-256 integrity verified successfully!");
+                    File.Delete(tempExe);
+                    throw new InvalidOperationException($"SHA-256 verification FAILED!\nExpected: {expectedHash}\nActual: {actualHash}");
                 }
-                else
-                {
-                    progressReporter?.Report($"Downloaded hash: {actualHash} (no published checksums file found, proceeding with caution)");
-                }
+                progressReporter?.Report("SHA-256 integrity verified successfully!");
 
-                // Target install location
-                string currentExe = Environment.ProcessPath ?? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), "WireFox", "WireFox.exe");
-                string installDir = Path.GetDirectoryName(currentExe) ?? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), "WireFox");
+                string newVersionTag = release.TagName.TrimStart('v', 'V');
 
                 // Generate elevated apply script
                 string scriptContent = $@"
@@ -409,6 +410,13 @@ while (-not $success -and $retryCount -lt $maxRetries) {{
     try {{
         Copy-Item -Path '{tempExe}' -Destination '{currentExe}' -Force -ErrorAction Stop
         Remove-Item -Path '{tempExe}' -Force -ErrorAction SilentlyContinue
+
+        # Update Windows Installed Apps registry DisplayVersion
+        $regKey = 'HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\WireFox'
+        if (Test-Path $regKey) {{
+            Set-ItemProperty -Path $regKey -Name 'DisplayVersion' -Value '{newVersionTag}' -ErrorAction SilentlyContinue
+        }}
+
         Start-Process -FilePath '{currentExe}'
         $success = $true
     }} catch {{
@@ -454,12 +462,40 @@ if (-not $success) {{
         {
             try
             {
-                var psi = new ProcessStartInfo
+                string currentDir = AppDomain.CurrentDomain.BaseDirectory;
+                string localVerify = Path.Combine(currentDir, "verify.ps1");
+                string programFilesVerify = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), "WireFox", "verify.ps1");
+                string? targetScript = File.Exists(localVerify) ? localVerify : (File.Exists(programFilesVerify) ? programFilesVerify : null);
+
+                ProcessStartInfo psi;
+                if (!string.IsNullOrEmpty(targetScript))
                 {
-                    FileName = "powershell.exe",
-                    Arguments = $"-NoExit -NoProfile -ExecutionPolicy Bypass -Command \"Write-Host 'Querying WireFox Integrity Auditor from GitHub...' -ForegroundColor Cyan; irm {ExternalVerifyScriptUrl} | iex\"",
-                    UseShellExecute = true
-                };
+                    psi = new ProcessStartInfo
+                    {
+                        FileName = "powershell.exe",
+                        Arguments = $"-NoExit -NoProfile -ExecutionPolicy Bypass -File \"{targetScript}\"",
+                        UseShellExecute = true
+                    };
+                }
+                else
+                {
+                    // Portable / standalone fallback: download script safely to a local file first rather than piping to iex
+                    string safeDownloadDir = Path.Combine(Path.GetTempPath(), "WireFox");
+                    Directory.CreateDirectory(safeDownloadDir);
+                    string downloadedScript = Path.Combine(safeDownloadDir, "verify.ps1");
+
+                    string scriptCmd = $"Write-Host 'Fetching WireFox Integrity Auditor from GitHub...' -ForegroundColor Cyan; " +
+                                       $"Invoke-WebRequest -Uri '{ExternalVerifyScriptUrl}' -OutFile '{downloadedScript}' -UseBasicParsing; " +
+                                       $"& '{downloadedScript}'";
+
+                    psi = new ProcessStartInfo
+                    {
+                        FileName = "powershell.exe",
+                        Arguments = $"-NoExit -NoProfile -ExecutionPolicy Bypass -Command \"{scriptCmd}\"",
+                        UseShellExecute = true
+                    };
+                }
+
                 Process.Start(psi);
             }
             catch (Exception ex)
