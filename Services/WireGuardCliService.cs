@@ -659,14 +659,14 @@ namespace WireFox.Services
                     }
 
                     // If still running or if we wish to clean up ghost interfaces
-                    if (!string.IsNullOrEmpty(_wireguardExePath) && IsTunnelServiceRunning(interfaceName))
+                    if (IsTunnelServiceRunning(interfaceName))
                     {
                         try
                         {
                             var psi = new ProcessStartInfo
                             {
-                                FileName = _wireguardExePath,
-                                Arguments = $"/uninstalltunnelservice \"{interfaceName}\"",
+                                FileName = "sc.exe",
+                                Arguments = $"delete \"{serviceName}\"",
                                 UseShellExecute = false,
                                 CreateNoWindow = true
                             };
@@ -710,14 +710,15 @@ namespace WireFox.Services
                     
                     ForceKillServiceProcess(serviceName);
 
-                    if (!string.IsNullOrEmpty(_wireguardExePath))
+                    var services = System.ServiceProcess.ServiceController.GetServices();
+                    if (services.Any(s => s.ServiceName.Equals(serviceName, StringComparison.OrdinalIgnoreCase)))
                     {
                         try
                         {
                             var psi = new ProcessStartInfo
                             {
-                                FileName = _wireguardExePath,
-                                Arguments = $"/uninstalltunnelservice \"{interfaceName}\"",
+                                FileName = "sc.exe",
+                                Arguments = $"delete \"{serviceName}\"",
                                 UseShellExecute = false,
                                 CreateNoWindow = true
                             };
@@ -738,7 +739,7 @@ namespace WireFox.Services
             });
         }
 
-        public async Task<bool> StopAllTunnelsAsync()
+        public async Task<bool> StopAllTunnelsAsync(bool killWireguardUi = false)
         {
             return await Task.Run(() =>
             {
@@ -776,7 +777,7 @@ namespace WireFox.Services
                         using var tkUi = Process.Start(new ProcessStartInfo
                         {
                             FileName = "taskkill",
-                            Arguments = "/F /IM wireguard.exe /IM wg.exe",
+                            Arguments = killWireguardUi ? "/F /IM wireguard.exe /IM wg.exe" : "/F /IM wg.exe",
                             UseShellExecute = false,
                             CreateNoWindow = true
                         });
@@ -962,3 +963,7 @@ namespace WireFox.Services
         }
     }
 }
+
+
+
+

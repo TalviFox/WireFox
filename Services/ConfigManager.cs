@@ -186,12 +186,29 @@ namespace WireFox.Services
             {
                 int removed = _currentConfig.TrustedNetworks.RemoveAll(s => string.Equals(s, ssid, StringComparison.OrdinalIgnoreCase));
 
-                // Also clean up any trusted gateways whose Name or StackedNames match this SSID
-                int removedGateways = _currentConfig.TrustedGateways.RemoveAll(g => 
-                    string.Equals(g.Name, ssid, StringComparison.OrdinalIgnoreCase) ||
-                    g.StackedNames.Contains(ssid, StringComparer.OrdinalIgnoreCase));
+                // Also clean up from stacked names in trusted gateways without destroying the physical gateway entry
+                foreach (var g in _currentConfig.TrustedGateways)
+                {
+                    int remStacked = g.StackedNames.RemoveAll(s => string.Equals(s, ssid, StringComparison.OrdinalIgnoreCase));
+                    if (remStacked > 0) removed += remStacked;
 
-                if (removed > 0 || removedGateways > 0)
+                    if (string.Equals(g.Name, ssid, StringComparison.OrdinalIgnoreCase))
+                    {
+                        if (g.StackedNames.Count > 0)
+                        {
+                            g.Name = g.StackedNames[0];
+                            g.StackedNames.RemoveAt(0);
+                            removed++;
+                        }
+                        else
+                        {
+                            g.Name = $"Gateway {g.IpAddress}";
+                            removed++;
+                        }
+                    }
+                }
+
+                if (removed > 0)
                 {
                     if (!_currentConfig.KnownUntrustedNetworks.Contains(ssid, StringComparer.OrdinalIgnoreCase))
                     {
@@ -204,7 +221,7 @@ namespace WireFox.Services
             }
         }
 
-        public bool UntrustNetwork(string? ssid, string? gatewayIp = null)
+        public bool UntrustNetwork(string? ssid, string? gatewayIp = null, string? gatewayMac = null)
         {
             lock (_lock)
             {
@@ -215,10 +232,26 @@ namespace WireFox.Services
                     int remNet = _currentConfig.TrustedNetworks.RemoveAll(s => string.Equals(s, ssid, StringComparison.OrdinalIgnoreCase));
                     if (remNet > 0) changed = true;
 
-                    int remGw = _currentConfig.TrustedGateways.RemoveAll(g => 
-                        string.Equals(g.Name, ssid, StringComparison.OrdinalIgnoreCase) ||
-                        g.StackedNames.Contains(ssid, StringComparer.OrdinalIgnoreCase));
-                    if (remGw > 0) changed = true;
+                    foreach (var g in _currentConfig.TrustedGateways)
+                    {
+                        int remStacked = g.StackedNames.RemoveAll(s => string.Equals(s, ssid, StringComparison.OrdinalIgnoreCase));
+                        if (remStacked > 0) changed = true;
+
+                        if (string.Equals(g.Name, ssid, StringComparison.OrdinalIgnoreCase))
+                        {
+                            if (g.StackedNames.Count > 0)
+                            {
+                                g.Name = g.StackedNames[0];
+                                g.StackedNames.RemoveAt(0);
+                                changed = true;
+                            }
+                            else
+                            {
+                                g.Name = $"Gateway {g.IpAddress}";
+                                changed = true;
+                            }
+                        }
+                    }
 
                     if (!_currentConfig.KnownUntrustedNetworks.Contains(ssid, StringComparer.OrdinalIgnoreCase))
                     {
@@ -227,10 +260,62 @@ namespace WireFox.Services
                     }
                 }
 
-                if (!string.IsNullOrWhiteSpace(gatewayIp))
+                // Only remove the entire gateway if there is no specific SSID being untrusted, or gateway explicitly untrusted
+                if (string.IsNullOrWhiteSpace(ssid) && !string.IsNullOrWhiteSpace(gatewayIp))
                 {
-                    int remIp = _currentConfig.TrustedGateways.RemoveAll(g => string.Equals(g.IpAddress, gatewayIp, StringComparison.OrdinalIgnoreCase));
+                    int remIp = _currentConfig.TrustedGateways.RemoveAll(g => 
+                        string.Equals(g.IpAddress, gatewayIp, StringComparison.OrdinalIgnoreCase) && 
+                        (string.IsNullOrWhiteSpace(gatewayMac) || string.Equals(g.MacAddress, gatewayMac, StringComparison.OrdinalIgnoreCase)));
                     if (remIp > 0) changed = true;
+                }
+
+                if (changed)
+                {
+                    Save(_currentConfig);
+                }
+                return changed;
+            }
+        }
+
+        public bool AutoRegisterTrustedSsid(string ssid, string? gatewayIp, string? gatewayMac)
+        {
+            if (string.IsNullOrWhiteSpace(ssid)) return false;
+
+            lock (_lock)
+            {
+                if (_currentConfig.KnownUntrustedNetworks.Contains(ssid, StringComparer.OrdinalIgnoreCase))
+                    return false;
+
+                bool changed = false;
+                if (!_currentConfig.TrustedNetworks.Contains(ssid, StringComparer.OrdinalIgnoreCase))
+                {
+                    _currentConfig.TrustedNetworks.Add(ssid);
+                    changed = true;
+                }
+
+                var gw = _currentConfig.TrustedGateways.FirstOrDefault(g =>
+                    (!string.IsNullOrWhiteSpace(gatewayMac) && !string.IsNullOrWhiteSpace(g.MacAddress) &&
+                     string.Equals(g.MacAddress, gatewayMac, StringComparison.OrdinalIgnoreCase)) ||
+                    (!string.IsNullOrWhiteSpace(gatewayIp) && string.Equals(g.IpAddress, gatewayIp, StringComparison.OrdinalIgnoreCase)));
+
+                if (gw != null)
+                {
+                    if (!string.Equals(gw.Name, ssid, StringComparison.OrdinalIgnoreCase) &&
+                        !gw.StackedNames.Contains(ssid, StringComparer.OrdinalIgnoreCase))
+                    {
+                        gw.StackedNames.Add(ssid);
+                        changed = true;
+                    }
+                    if (!string.IsNullOrWhiteSpace(gatewayIp) && !string.Equals(gw.IpAddress, gatewayIp, StringComparison.OrdinalIgnoreCase))
+                    {
+                        gw.IpAddress = gatewayIp;
+                        changed = true;
+                    }
+                    if (!string.IsNullOrWhiteSpace(gatewayMac) && !string.Equals(gw.MacAddress, gatewayMac, StringComparison.OrdinalIgnoreCase))
+                    {
+                        gw.MacAddress = gatewayMac;
+                        changed = true;
+                    }
                 }
 
                 if (changed)
@@ -247,14 +332,36 @@ namespace WireFox.Services
 
             lock (_lock)
             {
-                var existing = _currentConfig.TrustedGateways.FirstOrDefault(g => string.Equals(g.IpAddress, gateway.IpAddress, StringComparison.OrdinalIgnoreCase));
+                var existing = _currentConfig.TrustedGateways.FirstOrDefault(g => 
+                    (!string.IsNullOrWhiteSpace(gateway.MacAddress) && !string.IsNullOrWhiteSpace(g.MacAddress) &&
+                     string.Equals(g.MacAddress, gateway.MacAddress, StringComparison.OrdinalIgnoreCase)) ||
+                    (string.Equals(g.IpAddress, gateway.IpAddress, StringComparison.OrdinalIgnoreCase) && 
+                     (string.IsNullOrWhiteSpace(gateway.MacAddress) || string.IsNullOrWhiteSpace(g.MacAddress) ||
+                      string.Equals(g.MacAddress, gateway.MacAddress, StringComparison.OrdinalIgnoreCase))));
                 if (existing != null)
                 {
-                    if (!string.IsNullOrWhiteSpace(gateway.Name)) existing.Name = gateway.Name;
+                    if (!string.IsNullOrWhiteSpace(gateway.Name))
+                    {
+                        if (string.IsNullOrWhiteSpace(existing.Name) || existing.Name.StartsWith("Gateway "))
+                        {
+                            existing.Name = gateway.Name;
+                        }
+                        else if (!string.Equals(existing.Name, gateway.Name, StringComparison.OrdinalIgnoreCase))
+                        {
+                            if (!existing.StackedNames.Contains(gateway.Name, StringComparer.OrdinalIgnoreCase))
+                            {
+                                existing.StackedNames.Add(gateway.Name);
+                            }
+                        }
+                    }
+                    
                     if (!string.IsNullOrWhiteSpace(gateway.MacAddress)) existing.MacAddress = gateway.MacAddress;
+                    if (!string.IsNullOrWhiteSpace(gateway.IpAddress)) existing.IpAddress = gateway.IpAddress;
+                    
                     foreach (var name in gateway.StackedNames)
                     {
-                        if (!existing.StackedNames.Contains(name, StringComparer.OrdinalIgnoreCase))
+                        if (!string.Equals(existing.Name, name, StringComparison.OrdinalIgnoreCase) &&
+                            !existing.StackedNames.Contains(name, StringComparer.OrdinalIgnoreCase))
                         {
                             existing.StackedNames.Add(name);
                         }
@@ -270,13 +377,15 @@ namespace WireFox.Services
             }
         }
 
-        public bool UpdateGatewayMac(string ip, string newMac)
+        public bool UpdateGatewayMac(string ip, string oldMac, string newMac)
         {
             if (string.IsNullOrWhiteSpace(ip) || string.IsNullOrWhiteSpace(newMac)) return false;
 
             lock (_lock)
             {
-                var existing = _currentConfig.TrustedGateways.FirstOrDefault(g => string.Equals(g.IpAddress, ip, StringComparison.OrdinalIgnoreCase));
+                var existing = _currentConfig.TrustedGateways.FirstOrDefault(g => 
+                    string.Equals(g.IpAddress, ip, StringComparison.OrdinalIgnoreCase) && 
+                    string.Equals(g.MacAddress, oldMac, StringComparison.OrdinalIgnoreCase));
                 if (existing != null)
                 {
                     existing.MacAddress = newMac.Trim();
@@ -287,13 +396,15 @@ namespace WireFox.Services
             }
         }
 
-        public bool AddStackedNameToGateway(string ip, string networkName)
+        public bool AddStackedNameToGateway(string ip, string mac, string networkName)
         {
             if (string.IsNullOrWhiteSpace(ip) || string.IsNullOrWhiteSpace(networkName)) return false;
 
             lock (_lock)
             {
-                var existing = _currentConfig.TrustedGateways.FirstOrDefault(g => string.Equals(g.IpAddress, ip, StringComparison.OrdinalIgnoreCase));
+                var existing = _currentConfig.TrustedGateways.FirstOrDefault(g => 
+                    string.Equals(g.IpAddress, ip, StringComparison.OrdinalIgnoreCase) && 
+                    string.Equals(g.MacAddress, mac, StringComparison.OrdinalIgnoreCase));
                 if (existing != null)
                 {
                     if (!existing.StackedNames.Contains(networkName, StringComparer.OrdinalIgnoreCase))
@@ -307,13 +418,15 @@ namespace WireFox.Services
             }
         }
 
-        public bool RemoveStackedNameFromGateway(string ip, string networkName)
+        public bool RemoveStackedNameFromGateway(string ip, string mac, string networkName)
         {
             if (string.IsNullOrWhiteSpace(ip) || string.IsNullOrWhiteSpace(networkName)) return false;
 
             lock (_lock)
             {
-                var existing = _currentConfig.TrustedGateways.FirstOrDefault(g => string.Equals(g.IpAddress, ip, StringComparison.OrdinalIgnoreCase));
+                var existing = _currentConfig.TrustedGateways.FirstOrDefault(g => 
+                    string.Equals(g.IpAddress, ip, StringComparison.OrdinalIgnoreCase) && 
+                    string.Equals(g.MacAddress, mac, StringComparison.OrdinalIgnoreCase));
                 if (existing != null)
                 {
                     int removed = existing.StackedNames.RemoveAll(s => string.Equals(s, networkName, StringComparison.OrdinalIgnoreCase));
@@ -327,13 +440,15 @@ namespace WireFox.Services
             }
         }
 
-        public bool RemoveTrustedGateway(string ip)
+        public bool RemoveTrustedGateway(string ip, string macAddress)
         {
             if (string.IsNullOrWhiteSpace(ip)) return false;
 
             lock (_lock)
             {
-                int removed = _currentConfig.TrustedGateways.RemoveAll(g => string.Equals(g.IpAddress, ip, StringComparison.OrdinalIgnoreCase));
+                int removed = _currentConfig.TrustedGateways.RemoveAll(g => 
+                    string.Equals(g.IpAddress, ip, StringComparison.OrdinalIgnoreCase) && 
+                    string.Equals(g.MacAddress, macAddress, StringComparison.OrdinalIgnoreCase));
                 if (removed > 0)
                 {
                     Save(_currentConfig);

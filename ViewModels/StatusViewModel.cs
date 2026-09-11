@@ -346,12 +346,22 @@ namespace WireFox.ViewModels
 
             if (!string.IsNullOrEmpty(netState.GatewayIp))
             {
+                var stacked = new List<string>();
+                if (!string.IsNullOrWhiteSpace(netState.Ssid))
+                {
+                    stacked.Add(netState.Ssid);
+                }
+                else if (!string.IsNullOrWhiteSpace(netState.DnsSuffix))
+                {
+                    stacked.Add(netState.DnsSuffix);
+                }
+
                 var gw = new TrustedGateway
                 {
                     Name = !string.IsNullOrWhiteSpace(netState.Ssid) ? netState.Ssid : (netState.DnsServerName ?? $"Gateway {netState.GatewayIp}"),
                     IpAddress = netState.GatewayIp,
                     MacAddress = netState.GatewayMac ?? string.Empty,
-                    StackedNames = new List<string>(netState.DetectedNames)
+                    StackedNames = stacked
                 };
                 ConfigManager.Instance.AddOrUpdateTrustedGateway(gw);
             }
@@ -364,16 +374,16 @@ namespace WireFox.ViewModels
             var netState = NetworkMonitorService.Instance.CurrentState;
             LoggingService.Instance.Info("Status", $"User untrusting current network SSID='{netState.Ssid}', Gateway='{netState.GatewayIp}'");
             WatchdogService.Instance.ResetManualOverride();
-            ConfigManager.Instance.UntrustNetwork(netState.Ssid, netState.GatewayIp);
+            ConfigManager.Instance.UntrustNetwork(netState.Ssid, netState.GatewayIp, netState.GatewayMac);
             NetworkMonitorService.Instance.TriggerDebouncedEvaluation(TimeSpan.FromMilliseconds(50));
         }
 
         private void OnUpdateGatewayMac()
         {
             var netState = NetworkMonitorService.Instance.CurrentState;
-            if (!string.IsNullOrEmpty(netState.GatewayIp) && !string.IsNullOrEmpty(netState.GatewayMac))
+            if (!string.IsNullOrEmpty(netState.GatewayIp) && !string.IsNullOrEmpty(netState.GatewayMac) && !string.IsNullOrEmpty(netState.RegisteredGatewayMac))
             {
-                ConfigManager.Instance.UpdateGatewayMac(netState.GatewayIp, netState.GatewayMac);
+                ConfigManager.Instance.UpdateGatewayMac(netState.GatewayIp, netState.RegisteredGatewayMac, netState.GatewayMac);
                 NetworkMonitorService.Instance.TriggerDebouncedEvaluation(TimeSpan.FromMilliseconds(200));
             }
         }

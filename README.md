@@ -89,6 +89,11 @@ irm https://raw.githubusercontent.com/TalviFox/WireFox/main/uninstall.ps1 | iex
 
 ## 📝 Changelog
 
+### v1.0.5
+- **Fix:** Replaced native `wireguard.exe` tunnel uninstallation with silent `sc.exe delete` to eliminate "Service does not exist" Error UI popups when disconnecting/trusting networks.
+- **Fix:** Overhauled gateway storage logic to uniquely identify trusted networks by IP + MAC Address, resolving a major bug where multiple networks sharing the same default gateway (e.g. 192.168.1.1) would overwrite each other and trigger false-positive anti-spoofing lockouts.
+
+
 ### v1.0.4
 - **Resilient Tunnel Deactivation & Zombie Prevention:** Resolved the WireGuard deactivation freeze where driver deadlocks left services spinning in `StopPending` state. Added graceful stop timeout (3s) with immediate escalation to hosting process termination, SCM driver unbinding, and active DNS cache resolver flushing (`DnsFlushResolverCache`) to prevent Windows Filtering Platform (WFP) kernel blackholes.
 - **Interactive Tray Control:** Added direct **Kill WireGuard (Force Stop)** action item to the system tray.

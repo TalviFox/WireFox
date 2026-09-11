@@ -157,11 +157,11 @@ namespace WireFox.ViewModels
         {
             if (parameter is TrustedGateway gw)
             {
-                ConfigManager.Instance.RemoveTrustedGateway(gw.IpAddress);
+                ConfigManager.Instance.RemoveTrustedGateway(gw.IpAddress, gw.MacAddress);
             }
             else if (parameter is string ip)
             {
-                ConfigManager.Instance.RemoveTrustedGateway(ip);
+                ConfigManager.Instance.RemoveTrustedGateway(ip, string.Empty);
             }
         }
 
@@ -187,7 +187,7 @@ namespace WireFox.ViewModels
                 var netState = NetworkMonitorService.Instance.CurrentState;
                 if (!string.IsNullOrEmpty(netState.GatewayMac) && string.Equals(netState.GatewayIp, gw.IpAddress, StringComparison.OrdinalIgnoreCase))
                 {
-                    ConfigManager.Instance.UpdateGatewayMac(gw.IpAddress, netState.GatewayMac);
+                    ConfigManager.Instance.UpdateGatewayMac(gw.IpAddress, gw.MacAddress, netState.GatewayMac);
                 }
             }
         }
@@ -196,7 +196,7 @@ namespace WireFox.ViewModels
         {
             if (parameter is TrustedGateway gw && !string.IsNullOrWhiteSpace(NewStackedName))
             {
-                ConfigManager.Instance.AddStackedNameToGateway(gw.IpAddress, NewStackedName.Trim());
+                ConfigManager.Instance.AddStackedNameToGateway(gw.IpAddress, gw.MacAddress, NewStackedName.Trim());
                 NewStackedName = string.Empty;
             }
         }
@@ -205,7 +205,7 @@ namespace WireFox.ViewModels
         {
             if (parameter is (TrustedGateway gw, string name))
             {
-                ConfigManager.Instance.RemoveStackedNameFromGateway(gw.IpAddress, name);
+                ConfigManager.Instance.RemoveStackedNameFromGateway(gw.IpAddress, gw.MacAddress, name);
             }
         }
     }

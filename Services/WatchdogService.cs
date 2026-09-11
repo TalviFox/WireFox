@@ -655,7 +655,7 @@ namespace WireFox.Services
             SetStatus(TunnelStatus.Connecting);
 
             // Wipe out ALL WireGuard hooks globally before restarting the primary tunnel
-            await cli.StopAllTunnelsAsync();
+            await cli.StopAllTunnelsAsync(true);
             await Task.Delay(1000);
 
             _tunnelStartedUtc = DateTime.UtcNow;
@@ -689,7 +689,7 @@ namespace WireFox.Services
             LoggingService.Instance.Warning("WatchdogService", "KillAllWireGuardAsync invoked: force-stopping all tunnels!");
             _isManuallyDisabled = true;
             SetStatus(TunnelStatus.Disconnected);
-            await cli.StopAllTunnelsAsync();
+            await cli.StopAllTunnelsAsync(true);
             await RefreshStatusAsync();
             NotificationService.Instance.ShowNotification("WireGuard Force Stopped", 
                 "All WireGuard tunnels and kernel hooks were forcefully stopped. Normal network routing restored.");
@@ -765,3 +765,4 @@ namespace WireFox.Services
         }
     }
 }
+

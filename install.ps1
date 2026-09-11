@@ -21,7 +21,7 @@ $d = [char]0x2584
 
 $guardianBanner = @"
 $esc[0m $esc[0m $esc[0m $esc[0m $esc[0m $esc[0m $esc[0m $esc[0m $esc[0m $esc[0m $esc[0m $esc[38;2;7;5;5m$esc[49m$d$esc[38;2;23;30;35m$esc[49m$d$esc[38;2;0;0;0m$esc[48;2;39;78;98m$u$esc[38;2;13;20;24m$esc[48;2;117;163;184m$u$esc[38;2;14;21;26m$esc[48;2;107;153;176m$u$esc[38;2;0;0;0m$esc[48;2;39;79;99m$u$esc[38;2;23;30;34m$esc[49m$d$esc[38;2;7;5;4m$esc[49m$d$esc[0m $esc[0m $esc[0m $esc[0m $esc[0m $esc[0m $esc[0m $esc[0m $esc[0m $esc[0m $esc[0m $esc[0m   
-$esc[0m $esc[0m $esc[0m $esc[0m $esc[38;2;0;0;0m$esc[49m$d$esc[38;2;0;0;0m$esc[49m$d$esc[38;2;17;25;29m$esc[49m$d$esc[38;2;0;0;0m$esc[48;2;46;72;88m$u$esc[38;2;4;2;2m$esc[48;2;53;88;114m$u$esc[38;2;33;48;57m$esc[48;2;34;51;63m$u$esc[38;2;48;78;98m$esc[48;2;33;73;114m$u$esc[38;2;58;108;139m$esc[48;2;28;71;122m$u$esc[38;2;63;134;173m$esc[48;2;18;54;92m$u$esc[38;2;38;125;169m$esc[48;2;16;71;99m$u$esc[38;2;86;114;143m$esc[48;2;9;102;122m$u$esc[38;2;75;104;135m$esc[48;2;9;103;122m$u$esc[38;2;39;125;169m$esc[48;2;16;73;99m$u$esc[38;2;62;131;170m$esc[48;2;17;55;93m$u$esc[38;2;58;108;139m$esc[48;2;28;70;120m$u$esc[38;2;47;77;98m$esc[48;2;32;72;112m$u$esc[38;2;31;47;56m$esc[48;2;32;51;62m$u$esc[38;2;2;2;2m$esc[48;2;52;89;115m$u$esc[38;2;0;0;0m$esc[48;2;45;71;87m$u$esc[38;2;17;25;29m$esc[49m$d$esc[38;2;0;0;0m$esc[49m$d$esc[38;2;0;0;0m$esc[49m$d$esc[0m $esc[0m $esc[0m $esc[0m $esc[0m   $([char]::ConvertFromUtf32(0x1F98A)) $esc[1;36mWireFox$esc[0m $esc[1;34mv1.0.4$esc[0m
+$esc[0m $esc[0m $esc[0m $esc[0m $esc[38;2;0;0;0m$esc[49m$d$esc[38;2;0;0;0m$esc[49m$d$esc[38;2;17;25;29m$esc[49m$d$esc[38;2;0;0;0m$esc[48;2;46;72;88m$u$esc[38;2;4;2;2m$esc[48;2;53;88;114m$u$esc[38;2;33;48;57m$esc[48;2;34;51;63m$u$esc[38;2;48;78;98m$esc[48;2;33;73;114m$u$esc[38;2;58;108;139m$esc[48;2;28;71;122m$u$esc[38;2;63;134;173m$esc[48;2;18;54;92m$u$esc[38;2;38;125;169m$esc[48;2;16;71;99m$u$esc[38;2;86;114;143m$esc[48;2;9;102;122m$u$esc[38;2;75;104;135m$esc[48;2;9;103;122m$u$esc[38;2;39;125;169m$esc[48;2;16;73;99m$u$esc[38;2;62;131;170m$esc[48;2;17;55;93m$u$esc[38;2;58;108;139m$esc[48;2;28;70;120m$u$esc[38;2;47;77;98m$esc[48;2;32;72;112m$u$esc[38;2;31;47;56m$esc[48;2;32;51;62m$u$esc[38;2;2;2;2m$esc[48;2;52;89;115m$u$esc[38;2;0;0;0m$esc[48;2;45;71;87m$u$esc[38;2;17;25;29m$esc[49m$d$esc[38;2;0;0;0m$esc[49m$d$esc[38;2;0;0;0m$esc[49m$d$esc[0m $esc[0m $esc[0m $esc[0m $esc[0m   $([char]::ConvertFromUtf32(0x1F98A)) $esc[1;36mWireFox$esc[0m $esc[1;34mv1.0.5$esc[0m
 $esc[38;2;9;12;14m$esc[49m$d$esc[38;2;0;0;0m$esc[48;2;52;83;104m$u$esc[38;2;12;15;15m$esc[48;2;61;109;145m$u$esc[38;2;30;44;51m$esc[48;2;51;104;149m$u$esc[38;2;45;74;94m$esc[48;2;39;88;139m$u$esc[38;2;55;97;126m$esc[48;2;25;59;111m$u$esc[38;2;54;107;148m$esc[48;2;18;40;84m$u$esc[38;2;43;92;143m$esc[48;2;10;48;84m$u$esc[38;2;14;32;56m$esc[48;2;11;26;33m$u$esc[38;2;26;23;19m$esc[48;2;75;69;69m$u$esc[38;2;13;17;26m$esc[48;2;40;35;32m$u$esc[38;2;11;74;95m$esc[48;2;8;88;98m$u$esc[38;2;13;138;151m$esc[48;2;14;110;136m$u$esc[38;2;12;133;148m$esc[48;2;11;68;96m$u$esc[38;2;14;126;145m$esc[48;2;11;74;101m$u$esc[38;2;16;102;127m$esc[48;2;17;43;79m$u$esc[38;2;15;116;136m$esc[48;2;18;36;74m$u$esc[38;2;13;134;148m$esc[48;2;20;79;114m$u$esc[38;2;11;74;95m$esc[48;2;9;76;88m$u$esc[38;2;14;17;26m$esc[48;2;39;37;34m$u$esc[38;2;26;23;19m$esc[48;2;74;69;68m$u$esc[38;2;14;33;58m$esc[48;2;11;27;33m$u$esc[38;2;42;92;143m$esc[48;2;10;48;84m$u$esc[38;2;54;107;147m$esc[48;2;18;39;84m$u$esc[38;2;55;97;126m$esc[48;2;26;60;111m$u$esc[38;2;46;75;94m$esc[48;2;39;88;140m$u$esc[38;2;30;43;51m$esc[48;2;51;103;149m$u$esc[38;2;12;14;16m$esc[48;2;61;109;146m$u$esc[38;2;0;0;0m$esc[48;2;52;83;104m$u$esc[38;2;9;12;15m$esc[49m$d$esc[0m   $esc[90mWireGuard Companion for Windows$esc[0m
 $esc[38;2;3;6;11m$esc[48;2;2;4;8m$u$esc[38;2;37;81;122m$esc[48;2;20;56;99m$u$esc[38;2;44;87;130m$esc[48;2;29;64;107m$u$esc[38;2;14;39;81m$esc[48;2;12;116;129m$u$esc[38;2;12;46;80m$esc[48;2;13;167;176m$u$esc[38;2;12;75;98m$esc[48;2;13;131;147m$u$esc[38;2;13;112;127m$esc[48;2;17;132;154m$u$esc[38;2;9;101;107m$esc[48;2;1;52;61m$u$esc[38;2;43;57;57m$esc[48;2;65;42;42m$u$esc[38;2;174;117;126m$esc[48;2;237;157;170m$u$esc[38;2;62;59;59m$esc[48;2;182;173;175m$u$esc[38;2;17;15;18m$esc[48;2;91;90;86m$u$esc[38;2;8;53;75m$esc[48;2;3;37;54m$u$esc[38;2;13;87;116m$esc[48;2;10;50;67m$u$esc[38;2;13;91;118m$esc[48;2;1;34;46m$u$esc[38;2;19;58;95m$esc[48;2;4;22;39m$u$esc[38;2;21;54;93m$esc[48;2;14;33;56m$u$esc[38;2;12;30;58m$esc[48;2;4;18;40m$u$esc[38;2;17;11;16m$esc[48;2;91;93;89m$u$esc[38;2;63;60;60m$esc[48;2;182;173;175m$u$esc[38;2;174;117;125m$esc[48;2;238;156;170m$u$esc[38;2;43;57;57m$esc[48;2;64;42;41m$u$esc[38;2;9;103;109m$esc[48;2;1;38;50m$u$esc[38;2;13;113;129m$esc[48;2;17;125;148m$u$esc[38;2;12;75;98m$esc[48;2;12;130;146m$u$esc[38;2;13;46;80m$esc[48;2;12;167;174m$u$esc[38;2;14;39;82m$esc[48;2;12;116;130m$u$esc[38;2;44;88;131m$esc[48;2;29;64;106m$u$esc[38;2;37;80;122m$esc[48;2;19;56;98m$u$esc[38;2;3;6;10m$esc[48;2;2;4;8m$u$esc[0m   
 $esc[38;2;3;5;10m$esc[48;2;1;2;4m$u$esc[38;2;25;61;104m$esc[48;2;13;42;84m$u$esc[38;2;26;78;121m$esc[48;2;25;77;121m$u$esc[38;2;12;145;159m$esc[48;2;12;130;144m$u$esc[38;2;12;111;132m$esc[48;2;13;117;137m$u$esc[38;2;12;125;144m$esc[48;2;13;155;169m$u$esc[38;2;16;97;124m$esc[48;2;17;138;158m$u$esc[38;2;1;50;59m$esc[48;2;1;45;54m$u$esc[38;2;148;92;98m$esc[48;2;174;106;114m$u$esc[38;2;255;155;173m$esc[48;2;255;158;174m$u$esc[38;2;255;233;238m$esc[48;2;234;158;170m$u$esc[38;2;145;151;150m$esc[48;2;163;155;150m$u$esc[38;2;0;6;12m$esc[48;2;36;14;5m$u$esc[38;2;34;22;17m$esc[48;2;77;45;32m$u$esc[38;2;67;32;19m$esc[48;2;103;60;42m$u$esc[38;2;59;25;10m$esc[48;2;136;103;89m$u$esc[38;2;28;16;12m$esc[48;2;97;70;58m$u$esc[38;2;0;1;9m$esc[48;2;34;13;4m$u$esc[38;2;145;151;150m$esc[48;2;163;155;150m$u$esc[38;2;255;233;239m$esc[48;2;232;155;169m$u$esc[38;2;255;155;173m$esc[48;2;255;157;172m$u$esc[38;2;147;86;92m$esc[48;2;174;108;117m$u$esc[38;2;0;65;73m$esc[48;2;0;20;23m$u$esc[38;2;19;144;166m$esc[48;2;8;47;54m$u$esc[38;2;13;126;145m$esc[48;2;9;53;74m$u$esc[38;2;12;114;136m$esc[48;2;12;84;113m$u$esc[38;2;14;146;159m$esc[48;2;14;136;150m$u$esc[38;2;26;78;122m$esc[48;2;25;75;118m$u$esc[38;2;25;61;104m$esc[48;2;12;42;82m$u$esc[38;2;2;5;9m$esc[48;2;1;2;5m$u$esc[0m   $esc[1;37mHighlights:$esc[0m
@@ -118,16 +118,25 @@ $latestTag = $null
 if ((Test-Path $targetExe) -and -not $Force) {
     try {
         $fileInfo = [System.Diagnostics.FileVersionInfo]::GetVersionInfo($targetExe)
-        $installedVer = if ($fileInfo.FileVersion) { $fileInfo.FileVersion.Trim() } else { "1.0.0" }
+        $installedVer = if ($fileInfo.ProductVersion) { $fileInfo.ProductVersion.Trim() } elseif ($fileInfo.FileVersion) { $fileInfo.FileVersion.Trim() } else { "1.0.0" }
         
-        $headers = @{ "User-Agent" = "WireFox-Installer" }
-        $apiUrl = "https://api.github.com/repos/$repo/releases/latest"
-        $rel = Invoke-RestMethod -Uri $apiUrl -Headers $headers -UseBasicParsing -TimeoutSec 3 -ErrorAction SilentlyContinue
-        if ($rel -and $rel.tag_name) {
-            $latestTag = $rel.tag_name.TrimStart('v', 'V').Trim()
-            if ($installedVer -eq $latestTag -or $installedVer.StartsWith($latestTag)) {
-                $isUpToDate = $true
+        $localExe = if ($PSScriptRoot -and (Test-Path (Join-Path $PSScriptRoot "publish\WireFox.exe"))) { Join-Path $PSScriptRoot "publish\WireFox.exe" } elseif ($PSScriptRoot -and (Test-Path (Join-Path $PSScriptRoot "WireFox.exe"))) { Join-Path $PSScriptRoot "WireFox.exe" } else { $null }
+        if ($localExe) {
+            $localInfo = [System.Diagnostics.FileVersionInfo]::GetVersionInfo($localExe)
+            $latestTag = if ($localInfo.ProductVersion) { $localInfo.ProductVersion.Trim() } elseif ($localInfo.FileVersion) { $localInfo.FileVersion.Trim() }
+        }
+
+        if (-not $latestTag) {
+            $headers = @{ "User-Agent" = "WireFox-Installer" }
+            $apiUrl = "https://api.github.com/repos/$repo/releases/latest"
+            $rel = Invoke-RestMethod -Uri $apiUrl -Headers $headers -UseBasicParsing -TimeoutSec 3 -ErrorAction SilentlyContinue
+            if ($rel -and $rel.tag_name) {
+                $latestTag = $rel.tag_name.TrimStart('v', 'V').Trim()
             }
+        }
+
+        if ($latestTag -and ($installedVer -eq $latestTag -or $installedVer.StartsWith($latestTag))) {
+            $isUpToDate = $true
         }
     }
     catch {}
@@ -139,21 +148,31 @@ if ($isUpToDate) {
     $upToDateBanner = $ExecutionContext.InvokeCommand.ExpandString($upToDateBannerTemplate)
     Write-Host $upToDateBanner
     
-    $choice = Read-Host "`n    Press Enter to keep current installation, or type 'R' to force reinstall"
+    $choice = Read-Host "`n    Press [Enter] to keep current installation, or type 'R' to force reinstall"
     if ($choice -notmatch "^[rR]") {
         Write-Host "`n[*] WireFox is up to date. Stay safe!" -ForegroundColor Cyan
+        if (-not $Force) {
+            Read-Host "`n    Press [Enter] to exit"
+        }
         return
     }
     Write-Host "`n[*] Proceeding with forced reinstallation..." -ForegroundColor Yellow
 }
 else {
     Write-Host $guardianBanner
+    if (-not $Force) {
+        $confirm = Read-Host "`n    Press [Enter] to install WireFox, or type 'C' to cancel"
+        if ($confirm -match "^[cCqQ]") {
+            Write-Host "`n[*] Installation cancelled." -ForegroundColor Yellow
+            return
+        }
+    }
 }
 
 # 4. Check for Local Binary, Local Source Code, or Download Release
 $repo = "TalviFox/WireFox"
 $expectedHash = $null
-$releaseTag = "v1.0.4"
+$releaseTag = "v1.0.5"
 
 $candidateExe = $null
 if ($Path -and (Test-Path $Path)) {
@@ -171,7 +190,7 @@ if ($candidateExe -and -not $Build) {
     Copy-Item -Path $candidateExe -Destination $stagingExe -Force
     try {
         $verInfo = [System.Diagnostics.FileVersionInfo]::GetVersionInfo($candidateExe)
-        if ($verInfo.FileVersion) { $releaseTag = "v$($verInfo.FileVersion.Trim())" }
+        if ($verInfo.ProductVersion) { $releaseTag = "v$($verInfo.ProductVersion.Trim())" } elseif ($verInfo.FileVersion) { $releaseTag = "v$($verInfo.FileVersion.Trim())" }
     }
     catch {}
     Write-Host "[+] Local binary verified and staged for installation ($releaseTag)." -ForegroundColor Green
@@ -367,3 +386,7 @@ Write-Host @"
 
 Write-Host "[*] Launching WireFox..." -ForegroundColor Cyan
 Start-Process $targetExe
+
+if (-not $Force) {
+    Read-Host "`n    Press [Enter] to exit installer"
+}

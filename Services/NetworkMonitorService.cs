@@ -236,23 +236,28 @@ namespace WireFox.Services
             bool isGatewayMacMismatch = false;
             string? registeredMac = null;
 
-            // Check if any detected name matches trusted networks or stacked names in any trusted gateway
-            foreach (var name in detectedNames)
+            // Trust Evaluation:
+            // 1. Wi-Fi: Requires the active SSID to be explicitly trusted (in config.TrustedNetworks or a gateway's Name/StackedNames).
+            //    If a gateway MAC is registered for that profile, verify it to guard against Evil Twin / Wi-Fi spoofing.
+            if (isWireless && !string.IsNullOrWhiteSpace(activeSsid))
             {
-                if (config.TrustedNetworks.Contains(name, StringComparer.OrdinalIgnoreCase))
-                {
-                    isTrusted = true;
-                    break;
-                }
+                var matchingGws = config.TrustedGateways.Where(g => 
+                    string.Equals(g.Name, activeSsid, StringComparison.OrdinalIgnoreCase) ||
+                    g.StackedNames.Contains(activeSsid, StringComparer.OrdinalIgnoreCase)).ToList();
 
-                var matchingGw = config.TrustedGateways.FirstOrDefault(g => g.StackedNames.Contains(name, StringComparer.OrdinalIgnoreCase));
-                if (matchingGw != null)
+                if (matchingGws.Count > 0)
                 {
-                    if (!string.IsNullOrWhiteSpace(matchingGw.MacAddress) && !string.IsNullOrWhiteSpace(gatewayMac))
+                    bool foundValidMac = false;
+                    foreach (var matchingGw in matchingGws)
                     {
+                        if (string.IsNullOrWhiteSpace(matchingGw.MacAddress) || string.IsNullOrWhiteSpace(gatewayMac))
+                        {
+                            foundValidMac = true;
+                            break;
+                        }
                         if (string.Equals(matchingGw.MacAddress, gatewayMac, StringComparison.OrdinalIgnoreCase))
                         {
-                            isTrusted = true;
+                            foundValidMac = true;
                             break;
                         }
                         else
@@ -261,32 +266,99 @@ namespace WireFox.Services
                             registeredMac = matchingGw.MacAddress;
                         }
                     }
-                    else
+
+                    if (foundValidMac)
+                    {
+                        isTrusted = true;
+                        isGatewayMacMismatch = false;
+                    }
+                }
+                else if (config.TrustedNetworks.Contains(activeSsid, StringComparer.OrdinalIgnoreCase))
+                {
+                    isTrusted = true;
+                }
+            }
+            else
+            {
+                // 2. Wired (Ethernet) or Non-SSID connection:
+                //    First check if any detected DNS suffix matches TrustedNetworks or a gateway profile
+                foreach (var name in detectedNames)
+                {
+                    if (config.TrustedNetworks.Contains(name, StringComparer.OrdinalIgnoreCase))
                     {
                         isTrusted = true;
                         break;
                     }
-                }
-            }
 
-            // Check if Gateway IP matches a TrustedGateway
-            if (!isTrusted && !string.IsNullOrEmpty(gatewayIp))
-            {
-                var matchingGw = config.TrustedGateways.FirstOrDefault(g => string.Equals(g.IpAddress, gatewayIp, StringComparison.OrdinalIgnoreCase));
-                if (matchingGw != null)
+                    var matchingGws = config.TrustedGateways.Where(g => 
+                        string.Equals(g.Name, name, StringComparison.OrdinalIgnoreCase) ||
+                        g.StackedNames.Contains(name, StringComparer.OrdinalIgnoreCase)).ToList();
+
+                    if (matchingGws.Count > 0)
+                    {
+                        bool foundValidMac = false;
+                        foreach (var matchingGw in matchingGws)
+                        {
+                            if (string.IsNullOrWhiteSpace(matchingGw.MacAddress) || string.IsNullOrWhiteSpace(gatewayMac))
+                            {
+                                foundValidMac = true;
+                                break;
+                            }
+                            if (string.Equals(matchingGw.MacAddress, gatewayMac, StringComparison.OrdinalIgnoreCase))
+                            {
+                                foundValidMac = true;
+                                break;
+                            }
+                            else
+                            {
+                                isGatewayMacMismatch = true;
+                                registeredMac = matchingGw.MacAddress;
+                            }
+                        }
+
+                        if (foundValidMac)
+                        {
+                            isTrusted = true;
+                            isGatewayMacMismatch = false;
+                            break;
+                        }
+                    }
+                }
+
+                // 3. Wired Gateway MAC / IP Match:
+                if (!isTrusted && (!string.IsNullOrEmpty(gatewayMac) || !string.IsNullOrEmpty(gatewayIp)))
                 {
-                    if (string.IsNullOrWhiteSpace(matchingGw.MacAddress) || string.IsNullOrWhiteSpace(gatewayMac))
+                    var matchingGws = config.TrustedGateways.Where(g => 
+                        (!string.IsNullOrEmpty(gatewayMac) && !string.IsNullOrEmpty(g.MacAddress) && string.Equals(g.MacAddress, gatewayMac, StringComparison.OrdinalIgnoreCase)) ||
+                        (!string.IsNullOrEmpty(gatewayIp) && string.Equals(g.IpAddress, gatewayIp, StringComparison.OrdinalIgnoreCase))).ToList();
+
+                    if (matchingGws.Count > 0)
                     {
-                        isTrusted = true;
-                    }
-                    else if (string.Equals(matchingGw.MacAddress, gatewayMac, StringComparison.OrdinalIgnoreCase))
-                    {
-                        isTrusted = true;
-                    }
-                    else
-                    {
-                        isGatewayMacMismatch = true;
-                        registeredMac = matchingGw.MacAddress;
+                        bool foundValidMac = false;
+                        foreach (var matchingGw in matchingGws)
+                        {
+                            if (string.IsNullOrWhiteSpace(matchingGw.MacAddress) || string.IsNullOrWhiteSpace(gatewayMac))
+                            {
+                                foundValidMac = true;
+                                break;
+                            }
+                            if (string.Equals(matchingGw.MacAddress, gatewayMac, StringComparison.OrdinalIgnoreCase))
+                            {
+                                foundValidMac = true;
+                                break;
+                            }
+                            else
+                            {
+                                isGatewayMacMismatch = true;
+                                registeredMac = matchingGw.MacAddress;
+                            }
+                        }
+
+                        if (foundValidMac)
+                        {
+                            isTrusted = true;
+                            isGatewayMacMismatch = false;
+                        }
                     }
                 }
             }
