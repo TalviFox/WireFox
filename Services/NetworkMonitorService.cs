@@ -379,6 +379,51 @@ namespace WireFox.Services
             return withGateway ?? physicalCandidates.FirstOrDefault();
         }
 
+        /// <summary>
+        /// Fast non-blocking check to verify if the physical default gateway is reachable via ARP or ping.
+        /// Returns false if physically offline/disconnected.
+        /// </summary>
+        public async Task<bool> IsLocalGatewayReachableAsync(int timeoutMs = 800)
+        {
+            return await Task.Run(() =>
+            {
+                try
+                {
+                    string? gwIp = CurrentState.GatewayIp;
+                    IPAddress? ip = null;
+                    if (!string.IsNullOrWhiteSpace(gwIp))
+                    {
+                        IPAddress.TryParse(gwIp, out ip);
+                    }
+
+                    if (ip == null)
+                    {
+                        var primary = FindPrimaryPhysicalAdapter();
+                        var gw = primary?.GetIPProperties().GatewayAddresses
+                            .FirstOrDefault(g => g.Address.AddressFamily == AddressFamily.InterNetwork);
+                        if (gw == null) return false;
+                        ip = gw.Address;
+                    }
+
+                    // 1. ARP probe first (instantaneous, layer 2 local reachability check)
+                    string? mac = ArpService.GetMacAddress(ip);
+                    if (!string.IsNullOrEmpty(mac))
+                    {
+                        return true;
+                    }
+
+                    // 2. Fast ICMP ping fallback
+                    using var ping = new Ping();
+                    var reply = ping.Send(ip, timeoutMs);
+                    return reply.Status == IPStatus.Success;
+                }
+                catch
+                {
+                    return false;
+                }
+            });
+        }
+
         public void Dispose()
         {
             Stop();

@@ -15,11 +15,21 @@ param(
 )
 
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+[Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+$OutputEncoding = [System.Text.Encoding]::UTF8
 $ErrorActionPreference = "Stop"
+
+$foxEmoji = [char]::ConvertFromUtf32(0x1F98A)
+$tadaEmoji = [char]::ConvertFromUtf32(0x1F389)
+$clipboardEmoji = [char]::ConvertFromUtf32(0x1F4CB)
+$memoEmoji = [char]::ConvertFromUtf32(0x1F4DD)
+$lockEmoji = [char]::ConvertFromUtf32(0x1F512)
+$rocketEmoji = [char]::ConvertFromUtf32(0x1F680)
+$packageEmoji = [char]::ConvertFromUtf32(0x1F4E6)
 
 Write-Host @"
   =============================================================
-     🦊 WireFox Release Builder & Hash Signer
+     $foxEmoji WireFox Release Builder & Hash Signer
      FoxDen Software
   =============================================================
 "@ -ForegroundColor DarkCyan
@@ -63,8 +73,14 @@ Write-Host "[*] Using .NET toolchain: $dotnetPath" -ForegroundColor Cyan
 
 # 4. Clean and Publish Single-File Release
 Write-Host "[*] Publishing single-file release executable (win-x64)..." -ForegroundColor Cyan
+$existingNotes = $null
+$releaseNotesPath = Join-Path $publishDir "release_notes.md"
+if (Test-Path $releaseNotesPath) {
+    $existingNotes = [System.IO.File]::ReadAllText($releaseNotesPath, [System.Text.Encoding]::UTF8)
+}
+
 if (Test-Path $publishDir) {
-    Remove-Item -Path $publishDir -Recurse -Force -ErrorAction SilentlyContinue
+    Get-ChildItem -Path $publishDir -Exclude "release_notes.md" | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
 }
 
 $publishArgs = @(
@@ -148,16 +164,16 @@ $tripleBt = "$bt$bt$bt"
 Write-Host @"
 
   =============================================================
-     🎉 RELEASE v$cleanVersion BUILT SUCCESSFULLY!
+     $tadaEmoji RELEASE v$cleanVersion BUILT SUCCESSFULLY!
   =============================================================
   Output Binary:    $targetExe ($fileSizeMb MB)
   SHA-256 Hash:     $hash
   Checksums File:   $checksumsFile
 
   -------------------------------------------------------------
-  📋 COPY & PASTE FOR GITHUB RELEASE NOTES:
+  $clipboardEmoji COPY & PASTE FOR GITHUB RELEASE NOTES:
   -------------------------------------------------------------
-  ## 🔒 Checksums & Binary Verification
+  ## $lockEmoji Checksums & Binary Verification
   | File | SHA-256 Checksum |
   | :--- | :--- |
   | **WireFox.exe** | ${bt}$hash${bt} |
@@ -170,43 +186,26 @@ Write-Host @"
   ${tripleBt}
   -------------------------------------------------------------
 
-  📦 GITHUB RELEASE ASSETS TO UPLOAD:
+  $packageEmoji GITHUB RELEASE ASSETS TO UPLOAD:
   1. publish\WireFox.exe
   2. publish\uninstall.ps1
   3. publish\verify.ps1
   4. publish\SHA256SUMS.txt
   5. publish\release_notes.md (Use this for the GitHub release body!)
 
-  🚀 NEXT STEP (GIT PUSH):
+  $rocketEmoji NEXT STEP (GIT PUSH):
   git push origin HEAD --tags
   =============================================================
 "@ -ForegroundColor Green
 
-# 8. Generate release_notes.md template
+# 8. Generate or Update release_notes.md
 $releaseNotesPath = Join-Path $publishDir "release_notes.md"
 $foxEmoji = [char]::ConvertFromUtf32(0x1F98A)
 $memoEmoji = [char]::ConvertFromUtf32(0x1F4DD)
 $lockEmoji = [char]::ConvertFromUtf32(0x1F512)
+$utf8NoBom = New-Object System.Text.UTF8Encoding($false)
 
-$releaseNotesTemplate = @"
-# $foxEmoji WireFox v$cleanVersion
-
-WireFox bridges the missing link of WireGuard on Windows: intelligent background roaming and kernel-level tunnel watchdog protection.
-
-## $memoEmoji What's New in v$cleanVersion
-
-- **Fail-Closed Security Enforcement:** In-place updates strictly validate SHA-256 cryptographic hashes before execution, blocking unverified or tampered binaries.
-- **Hardened Update Staging:** In-place updates now stage exclusively inside protected ``Program Files`` to prevent unprivileged payload injection.
-- **Safe Interface Discovery:** Tunnel configuration discovery validates interface naming and parses ``[Interface]`` headers to prevent arbitrary file reading.
-- **Portable Security Guardrails:** Portable builds guard against registering elevated scheduled tasks from untrusted directories and offer 1-click migration to ``Program Files``.
-- **Installed Apps Auto-Sync:** WireFox automatically synchronizes its registered display version in Windows Installed Apps upon startup.
-
-Run PowerShell as Administrator to install or seamlessly upgrade in place:
-
-${tripleBt}powershell
-irm https://raw.githubusercontent.com/TalviFox/WireFox/main/install.ps1 | iex
-${tripleBt}
-
+$checksumSection = @"
 ## $lockEmoji Checksums & Binary Verification
 
 | File | SHA-256 Checksum |
@@ -222,5 +221,30 @@ irm https://raw.githubusercontent.com/TalviFox/WireFox/main/verify.ps1 | iex
 ${tripleBt}
 "@
 
-[System.IO.File]::WriteAllText($releaseNotesPath, $releaseNotesTemplate, [System.Text.Encoding]::UTF8)
-Write-Host "[+] Draft release notes saved to $releaseNotesPath" -ForegroundColor Green
+if ($existingNotes -and $existingNotes -match "(?m)^## .*What's New in v$cleanVersion") {
+    # Preserve existing custom changelog for this version, only update title and checksums table
+    $updatedNotes = [regex]::Replace($existingNotes, "(?m)^# .*WireFox v.*$", "# $foxEmoji WireFox v$cleanVersion")
+    $updatedNotes = [regex]::Replace($updatedNotes, "(?ms)^## [^\r\n]*Checksums & Binary Verification.*$", $checksumSection)
+    [System.IO.File]::WriteAllText($releaseNotesPath, $updatedNotes, $utf8NoBom)
+    Write-Host "[+] Updated checksums in existing release notes at $releaseNotesPath" -ForegroundColor Green
+} else {
+    $releaseNotesTemplate = @"
+# $foxEmoji WireFox v$cleanVersion
+
+WireFox bridges the missing link of WireGuard on Windows: intelligent background roaming and kernel-level tunnel watchdog protection.
+
+## $memoEmoji What's New in v$cleanVersion
+
+- **<Feature or Fix>:** <Detailed description of changes made in this release>
+
+Run PowerShell as Administrator to install or seamlessly upgrade in place:
+
+${tripleBt}powershell
+irm https://raw.githubusercontent.com/TalviFox/WireFox/main/install.ps1 | iex
+${tripleBt}
+
+$checksumSection
+"@
+    [System.IO.File]::WriteAllText($releaseNotesPath, $releaseNotesTemplate, $utf8NoBom)
+    Write-Host "[+] Draft release notes saved to $releaseNotesPath" -ForegroundColor Green
+}

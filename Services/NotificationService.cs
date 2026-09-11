@@ -31,8 +31,39 @@ namespace WireFox.Services
             }
         }
 
+        private readonly System.Collections.Generic.Dictionary<string, DateTime> _cooldowns = new(StringComparer.OrdinalIgnoreCase);
+        private readonly object _lock = new();
+
+        public bool CheckAndSetCooldown(string key, TimeSpan cooldown)
+        {
+            lock (_lock)
+            {
+                if (_cooldowns.TryGetValue(key, out var lastShown))
+                {
+                    if (DateTime.UtcNow - lastShown < cooldown)
+                    {
+                        LoggingService.Instance.Debug("NotificationService", $"Suppressed toast '{key}' due to active cooldown.");
+                        return false;
+                    }
+                }
+                _cooldowns[key] = DateTime.UtcNow;
+                return true;
+            }
+        }
+
+        public void ResetCooldown(string key)
+        {
+            lock (_lock)
+            {
+                _cooldowns.Remove(key);
+            }
+        }
+
         public void ShowNewNetworkPrompt(string ssid, bool isVpnActive)
         {
+            if (string.IsNullOrWhiteSpace(ssid)) return;
+            if (!CheckAndSetCooldown($"new_network_{ssid}", TimeSpan.FromMinutes(10))) return;
+
             try
             {
                 var builder = new ToastContentBuilder()
@@ -64,7 +95,11 @@ namespace WireFox.Services
                         .SetBackgroundActivation());
                 }
 
-                builder.Show();
+                builder.Show(toast =>
+                {
+                    toast.Tag = $"net_{ssid}";
+                    toast.Group = "wirefox";
+                });
                 LoggingService.Instance.Info("NotificationService", $"ShowNewNetworkPrompt displayed for '{ssid}', VpnActive={isVpnActive}");
             }
             catch (Exception ex)
@@ -75,11 +110,13 @@ namespace WireFox.Services
 
         public void ShowWatchdogBlockedPrompt(string interfaceName)
         {
+            if (!CheckAndSetCooldown($"watchdog_blocked_{interfaceName}", TimeSpan.FromMinutes(3))) return;
+
             try
             {
                 new ToastContentBuilder()
                     .AddText("VPN Tunnel Blocked")
-                    .AddText($"No handshake received on {interfaceName}. Captive portal or firewall may be blocking UDP.")
+                    .AddText($"No handshake or internet response on {interfaceName}. Captive portal, firewall, or driver freeze detected.")
                     .AddButton(new ToastButton()
                         .SetContent("Pause 15 Mins")
                         .AddArgument("action", "pause")
@@ -89,7 +126,11 @@ namespace WireFox.Services
                         .SetContent("Restart Tunnel")
                         .AddArgument("action", "restart_tunnel").AddArgument("param", "1")
                         .SetBackgroundActivation())
-                    .Show();
+                    .Show(toast =>
+                    {
+                        toast.Tag = "watchdog_blocked";
+                        toast.Group = "wirefox";
+                    });
             }
             catch (Exception ex)
             {
@@ -99,6 +140,8 @@ namespace WireFox.Services
 
         public void ShowTimerExpiringWarning(string sessionType, int minutesRemaining)
         {
+            if (!CheckAndSetCooldown("timer_expiring_warning", TimeSpan.FromMinutes(2))) return;
+
             try
             {
                 new ToastContentBuilder()
@@ -113,7 +156,11 @@ namespace WireFox.Services
                         .SetContent("Revert to Full Tunnel")
                         .AddArgument("action", "revert_full").AddArgument("param", "1")
                         .SetBackgroundActivation())
-                    .Show();
+                    .Show(toast =>
+                    {
+                        toast.Tag = "timer_expiring";
+                        toast.Group = "wirefox";
+                    });
             }
             catch (Exception ex)
             {
@@ -125,10 +172,15 @@ namespace WireFox.Services
         {
             try
             {
+                string tag = $"wirefox_notif_{title.ToLowerInvariant().Replace(' ', '_')}";
                 new ToastContentBuilder()
                     .AddText(title)
                     .AddText(message)
-                    .Show();
+                    .Show(toast =>
+                    {
+                        toast.Tag = tag;
+                        toast.Group = "wirefox";
+                    });
             }
             catch (Exception ex)
             {
@@ -138,10 +190,12 @@ namespace WireFox.Services
 
         public void ShowUpdatePrompt(string newVersion, string releaseNotesUrl)
         {
+            if (!CheckAndSetCooldown($"update_{newVersion}", TimeSpan.FromHours(1))) return;
+
             try
             {
                 new ToastContentBuilder()
-                    .AddText("🦊 WireFox Update Available")
+                    .AddText("\U0001F98A WireFox Update Available")
                     .AddText($"A new release ({newVersion}) is available on GitHub.")
                     .AddButton(new ToastButton()
                         .SetContent("Update Now")
@@ -158,7 +212,11 @@ namespace WireFox.Services
                         .AddArgument("action", "skip_update_version")
                         .AddArgument("param", newVersion)
                         .SetBackgroundActivation())
-                    .Show();
+                    .Show(toast =>
+                    {
+                        toast.Tag = "update_prompt";
+                        toast.Group = "wirefox";
+                    });
 
                 LoggingService.Instance.Info("NotificationService", $"ShowUpdatePrompt displayed for '{newVersion}'");
             }

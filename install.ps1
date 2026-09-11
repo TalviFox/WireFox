@@ -2,6 +2,15 @@
 # https://github.com/TalviFox/WireFox
 # Automated Roaming & Watchdog Manager for WireGuard on Windows
 
+[CmdletBinding(DefaultParameterSetName = "Default")]
+param(
+    [Parameter(Position = 0)]
+    [string]$Path,
+
+    [switch]$Force,
+    [switch]$Build
+)
+
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 $ErrorActionPreference = "Stop"
 
@@ -55,16 +64,26 @@ $isAdmin = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIden
 if (-not $isAdmin) {
     Write-Host "`n[!] Administrator privileges are required to install WireFox and control WireGuard services." -ForegroundColor Yellow
     Write-Host "[*] Requesting elevation..." -ForegroundColor Cyan
+    $elevateArgs = "-NoProfile -ExecutionPolicy Bypass"
     if ($PSCommandPath -and (Test-Path $PSCommandPath)) {
-        Start-Process powershell -Verb RunAs -ArgumentList "-NoProfile -ExecutionPolicy Bypass -File `"$PSCommandPath`""
-    } else {
+        $elevateArgs += " -File `"$PSCommandPath`""
+    }
+    else {
         $tempStaging = Join-Path $env:TEMP "WireFox_Installer"
         if (-not (Test-Path $tempStaging)) { New-Item -ItemType Directory -Path $tempStaging -Force | Out-Null }
         $tempScript = Join-Path $tempStaging "install.ps1"
         $installerUrl = "https://raw.githubusercontent.com/TalviFox/WireFox/main/install.ps1"
         Invoke-WebRequest -Uri $installerUrl -OutFile $tempScript -UseBasicParsing
-        Start-Process powershell -Verb RunAs -ArgumentList "-NoProfile -ExecutionPolicy Bypass -File `"$tempScript`""
+        $elevateArgs += " -File `"$tempScript`""
     }
+    if ($Path) {
+        $resolved = if (Test-Path $Path) { (Resolve-Path $Path).Path } else { $Path }
+        $elevateArgs += " -Path `"$resolved`""
+    }
+    if ($Force) { $elevateArgs += " -Force" }
+    if ($Build) { $elevateArgs += " -Build" }
+
+    Start-Process powershell -Verb RunAs -ArgumentList $elevateArgs
     return
 }
 
@@ -105,16 +124,18 @@ if ((Test-Path $targetExe) -and -not $Force) {
         $apiUrl = "https://api.github.com/repos/$repo/releases/latest"
         $rel = Invoke-RestMethod -Uri $apiUrl -Headers $headers -UseBasicParsing -TimeoutSec 3 -ErrorAction SilentlyContinue
         if ($rel -and $rel.tag_name) {
-            $latestTag = $rel.tag_name.TrimStart('v','V').Trim()
+            $latestTag = $rel.tag_name.TrimStart('v', 'V').Trim()
             if ($installedVer -eq $latestTag -or $installedVer.StartsWith($latestTag)) {
                 $isUpToDate = $true
             }
         }
-    } catch {}
+    }
+    catch {}
 }
 
 if ($isUpToDate) {
     $currentVersion = $installedVer
+    [void]$currentVersion # Suppress IDE warning (variable is dynamically used by ExpandString)
     $upToDateBanner = $ExecutionContext.InvokeCommand.ExpandString($upToDateBannerTemplate)
     Write-Host $upToDateBanner
     
@@ -124,17 +145,38 @@ if ($isUpToDate) {
         return
     }
     Write-Host "`n[*] Proceeding with forced reinstallation..." -ForegroundColor Yellow
-} else {
+}
+else {
     Write-Host $guardianBanner
 }
 
-# 4. Check for Local Source Code and Build, or Download Release
+# 4. Check for Local Binary, Local Source Code, or Download Release
 $repo = "TalviFox/WireFox"
 $expectedHash = $null
 $releaseTag = "v1.0.0"
 
-$localProj = if ($PSScriptRoot) { Join-Path $PSScriptRoot "WireFox.csproj" } else { $null }
-if ($localProj -and (Test-Path $localProj)) {
+$candidateExe = $null
+if ($Path -and (Test-Path $Path)) {
+    $candidateExe = (Resolve-Path $Path).Path
+}
+elseif ($PSScriptRoot -and (Test-Path (Join-Path $PSScriptRoot "publish\WireFox.exe"))) {
+    $candidateExe = Join-Path $PSScriptRoot "publish\WireFox.exe"
+}
+elseif ($PSScriptRoot -and (Test-Path (Join-Path $PSScriptRoot "WireFox.exe"))) {
+    $candidateExe = Join-Path $PSScriptRoot "WireFox.exe"
+}
+
+if ($candidateExe -and -not $Build) {
+    Write-Host "[*] Pre-compiled local binary detected: $candidateExe" -ForegroundColor Cyan
+    Copy-Item -Path $candidateExe -Destination $stagingExe -Force
+    try {
+        $verInfo = [System.Diagnostics.FileVersionInfo]::GetVersionInfo($candidateExe)
+        if ($verInfo.FileVersion) { $releaseTag = "v$($verInfo.FileVersion.Trim())" }
+    }
+    catch {}
+    Write-Host "[+] Local binary verified and staged for installation ($releaseTag)." -ForegroundColor Green
+}
+elseif ($localProj -and (Test-Path $localProj)) {
     Write-Host "[*] Local source code detected. Building locally instead of downloading..." -ForegroundColor Cyan
     $publishDir = Join-Path $PSScriptRoot "publish"
     
@@ -158,7 +200,8 @@ if ($localProj -and (Test-Path $localProj)) {
     
     Copy-Item -Path $builtExe -Destination $stagingExe -Force
     Write-Host "[+] Local build compiled and verified." -ForegroundColor Green
-} else {
+}
+else {
     $apiUrl = "https://api.github.com/repos/$repo/releases/latest"
     $headers = @{ "User-Agent" = "WireFox-Installer" }
 
@@ -174,7 +217,8 @@ if ($localProj -and (Test-Path $localProj)) {
             $checksumText = Invoke-RestMethod -Uri $sumsAsset.browser_download_url -Headers $headers -UseBasicParsing
             if ($checksumText -match "([a-fA-F0-9]{64})\s+.*WireFox\.exe") {
                 $expectedHash = $matches[1].ToLowerInvariant()
-            } elseif ($checksumText -match "\b([a-fA-F0-9]{64})\b") {
+            }
+            elseif ($checksumText -match "\b([a-fA-F0-9]{64})\b") {
                 $expectedHash = $matches[1].ToLowerInvariant()
             }
         }
@@ -183,7 +227,8 @@ if ($localProj -and (Test-Path $localProj)) {
         if (-not $expectedHash -and $release.body -match "\b([a-fA-F0-9]{64})\b") {
             $expectedHash = $matches[1].ToLowerInvariant()
         }
-    } catch {
+    }
+    catch {
         Write-Host "[!] Could not query release API metadata. Proceeding with direct binary download..." -ForegroundColor Yellow
     }
 
@@ -191,7 +236,8 @@ if ($localProj -and (Test-Path $localProj)) {
     Write-Host "[*] Downloading WireFox ($releaseTag)..." -ForegroundColor Cyan
     try {
         Invoke-WebRequest -Uri $downloadUrl -OutFile $stagingExe -UseBasicParsing
-    } catch {
+    }
+    catch {
         Write-Host "`n[X] Failed to download WireFox.exe from GitHub Releases ($downloadUrl)." -ForegroundColor Red
         Write-Host "    Please ensure a Release containing 'WireFox.exe' exists at:" -ForegroundColor Yellow
         Write-Host "    https://github.com/$repo/releases" -ForegroundColor White
@@ -213,14 +259,21 @@ if ($localProj -and (Test-Path $localProj)) {
             return
         }
         Write-Host "[+] SHA-256 integrity verified successfully! (100% Match with GitHub Release)" -ForegroundColor Green
-    } else {
+    }
+    else {
         Write-Host "[!] Notice: No published checksum found in release metadata. Proceeding with caution." -ForegroundColor Yellow
     }
 }
 
-# 6. Stop running instance if updating
+# 6. Stop running instance if updating (Ask before killing)
 $running = Get-Process -Name "WireFox" -ErrorAction SilentlyContinue
 if ($running) {
+    Write-Host "`n[?] WireFox is currently running in the background." -ForegroundColor Yellow
+    $confirm = Read-Host "    Do you want to close the running WireFox instance to proceed with installation? (Y/N)"
+    if ($confirm -notmatch "^[yY]") {
+        Write-Host "[*] Installation cancelled by user. The running WireFox instance was not closed." -ForegroundColor Cyan
+        return
+    }
     Write-Host "[*] Stopping running WireFox process..." -ForegroundColor Cyan
     $running | Stop-Process -Force
     Start-Sleep -Seconds 1
@@ -241,12 +294,14 @@ $localVerifier = if ($PSScriptRoot) { Join-Path $PSScriptRoot "verify.ps1" } els
 if ($localUninstall -and (Test-Path $localUninstall)) {
     Copy-Item -Path $localUninstall -Destination $uninstallerTarget -Force
     Write-Host "[+] Local uninstaller script deployed: $uninstallerTarget" -ForegroundColor Green
-} else {
+}
+else {
     try {
         $uninstallerUrl = "https://raw.githubusercontent.com/$repo/main/uninstall.ps1"
         Invoke-WebRequest -Uri $uninstallerUrl -OutFile $uninstallerTarget -UseBasicParsing
         Write-Host "[+] Uninstaller script deployed: $uninstallerTarget" -ForegroundColor Green
-    } catch {
+    }
+    catch {
         Write-Host "[!] Could not deploy uninstaller script: $_" -ForegroundColor Yellow
     }
 }
@@ -254,12 +309,14 @@ if ($localUninstall -and (Test-Path $localUninstall)) {
 if ($localVerifier -and (Test-Path $localVerifier)) {
     Copy-Item -Path $localVerifier -Destination $verifierTarget -Force
     Write-Host "[+] Local integrity auditor deployed: $verifierTarget" -ForegroundColor Green
-} else {
+}
+else {
     try {
         $verifierUrl = "https://raw.githubusercontent.com/$repo/main/verify.ps1"
         Invoke-WebRequest -Uri $verifierUrl -OutFile $verifierTarget -UseBasicParsing
         Write-Host "[+] Integrity auditor script deployed: $verifierTarget" -ForegroundColor Green
-    } catch {
+    }
+    catch {
         Write-Host "[!] Could not deploy integrity auditor script: $_" -ForegroundColor Yellow
     }
 }
@@ -271,14 +328,15 @@ try {
         New-Item -Path $regKey -Force | Out-Null
     }
     Set-ItemProperty -Path $regKey -Name "DisplayName" -Value "WireFox"
-    Set-ItemProperty -Path $regKey -Name "DisplayVersion" -Value $releaseTag.TrimStart('v','V')
+    Set-ItemProperty -Path $regKey -Name "DisplayVersion" -Value $releaseTag.TrimStart('v', 'V')
     Set-ItemProperty -Path $regKey -Name "Publisher" -Value "FoxDen Software"
     Set-ItemProperty -Path $regKey -Name "DisplayIcon" -Value "$targetExe,0"
     Set-ItemProperty -Path $regKey -Name "InstallLocation" -Value $installDir
     Set-ItemProperty -Path $regKey -Name "UninstallString" -Value "powershell.exe -NoProfile -ExecutionPolicy Bypass -File `"$uninstallerTarget`""
     Set-ItemProperty -Path $regKey -Name "URLInfoAbout" -Value "https://github.com/TalviFox/WireFox"
     Write-Host "[+] Registered in Windows Installed Apps (Add or Remove Programs)." -ForegroundColor Green
-} catch {
+}
+catch {
     Write-Host "[!] Could not register in Windows Uninstall registry: $_" -ForegroundColor Yellow
 }
 
@@ -293,15 +351,17 @@ try {
     $shortcut.Description = "Automated Roaming & Watchdog Manager for WireGuard on Windows"
     $shortcut.Save()
     Write-Host "[+] Start Menu shortcut created." -ForegroundColor Green
-} catch {
+}
+catch {
     Write-Host "[!] Could not create Start Menu shortcut: $_" -ForegroundColor Yellow
 }
 
 # 11. Complete & Launch
+$checkEmoji = [char]::ConvertFromUtf32(0x2705)
 Write-Host @"
 
   ======================================================
-     ✅ WireFox has been installed successfully!
+     $checkEmoji WireFox has been installed successfully!
   ======================================================
 "@ -ForegroundColor Green
 

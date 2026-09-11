@@ -56,6 +56,8 @@ namespace WireFox.Views
             var contextMenu = new ContextMenuStrip();
             contextMenu.Items.Add("Open WireFox", null, (s, e) => ShowAndRestore());
             contextMenu.Items.Add(new ToolStripSeparator());
+            contextMenu.Items.Add("Kill WireGuard (Force Stop)", null, async (s, e) => await WatchdogService.Instance.KillAllWireGuardAsync());
+            contextMenu.Items.Add(new ToolStripSeparator());
             contextMenu.Items.Add("Pause VPN (15 Mins)", null, async (s, e) => await WatchdogService.Instance.PauseTunnelAsync(TimeSpan.FromMinutes(15)));
             contextMenu.Items.Add("Split-Tunnel (15 Mins)", null, async (s, e) => await WatchdogService.Instance.EnableSplitTunnelAsync(TimeSpan.FromMinutes(15)));
             contextMenu.Items.Add("Revert to Full Tunnel", null, async (s, e) => await WatchdogService.Instance.RevertToFullTunnelAsync());

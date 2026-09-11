@@ -1,5 +1,10 @@
 using System;
+using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
+using System.Net;
+using System.Net.Http;
+using System.ServiceProcess;
 using System.Threading;
 using System.Threading.Tasks;
 using WireFox.Models;
@@ -11,6 +16,7 @@ namespace WireFox.Services
         private static readonly Lazy<WatchdogService> _instance = new(() => new WatchdogService());
         public static WatchdogService Instance => _instance.Value;
 
+        private static readonly HttpClient _httpClient = new() { Timeout = TimeSpan.FromSeconds(2) };
         private readonly System.Timers.Timer _periodicTimer;
         private readonly object _lock = new();
 
@@ -23,6 +29,10 @@ namespace WireFox.Services
         private bool _warningSentForCurrentSession;
         private bool _isManuallyDisabled;
         private bool _isStarted;
+        private int _consecutiveFailures = 0;
+        private readonly List<DateTime> _restartTimestamps = new();
+        private long _lastTxBytes = 0;
+        private long _lastRxBytes = 0;
 
         public event Action<TunnelStatus>? StatusChanged;
         public event Action<DateTime?>? HandshakeUpdated;
@@ -101,11 +111,8 @@ namespace WireFox.Services
             if (state.IsTrusted)
             {
                 _sessionExpiresUtc = null;
-                if (isRunning)
-                {
-                    LoggingService.Instance.Info("WatchdogService", "Trusted network active: stopping VPN tunnel");
-                    await cli.StopTunnelAsync(targetInterface);
-                }
+                LoggingService.Instance.Info("WatchdogService", "Trusted network active: stopping all VPN tunnels");
+                await cli.StopAllTunnelsAsync();
                 SetStatus(TunnelStatus.Bypassed);
                 return;
             }
@@ -272,19 +279,65 @@ namespace WireFox.Services
             return !string.IsNullOrWhiteSpace(config.WireGuardInterface) ? config.WireGuardInterface : "wg0";
         }
 
+        private async Task<bool> CheckInternetHealthAsync()
+        {
+            try
+            {
+                var cts = new CancellationTokenSource(TimeSpan.FromSeconds(2));
+                var response = await _httpClient.GetAsync("http://connectivitycheck.gstatic.com/generate_204", cts.Token);
+                return response.IsSuccessStatusCode;
+            }
+            catch
+            {
+                try
+                {
+                    var dnsTask = Dns.GetHostAddressesAsync("www.msftconnecttest.com");
+                    if (await Task.WhenAny(dnsTask, Task.Delay(2000)) == dnsTask)
+                    {
+                        var addrs = await dnsTask;
+                        return addrs != null && addrs.Length > 0;
+                    }
+                }
+                catch { }
+                return false;
+            }
+        }
+
         private async Task CheckHandshakeWatchdogAsync()
         {
             var config = ConfigManager.Instance.Config;
             var cli = WireGuardCliService.Instance;
             string targetInterface = GetEffectiveInterfaceName(config);
 
-            if (!cli.IsInstalled || !cli.IsTunnelServiceRunning(targetInterface))
+            if (!cli.IsInstalled)
             {
                 return;
             }
 
-            // Allow initial 30-second grace period after starting
-            if (_tunnelStartedUtc.HasValue && (DateTime.UtcNow - _tunnelStartedUtc.Value).TotalSeconds < 30)
+            // 1. Proactively detect if any WireGuard tunnel service is stuck in StopPending
+            try
+            {
+                var services = ServiceController.GetServices();
+                var stuckServices = services.Where(s => 
+                    s.ServiceName.StartsWith("WireGuardTunnel$", StringComparison.OrdinalIgnoreCase) && 
+                    s.Status == ServiceControllerStatus.StopPending).ToList();
+
+                foreach (var stuck in stuckServices)
+                {
+                    LoggingService.Instance.Warning("WatchdogService", 
+                        $"Found service '{stuck.ServiceName}' stuck in StopPending state. Escalating force-kill...");
+                    cli.ForceKillServiceProcess(stuck.ServiceName);
+                }
+            }
+            catch { }
+
+            if (!cli.IsTunnelServiceRunning(targetInterface))
+            {
+                return;
+            }
+
+            // Allow initial 25-second grace period after starting
+            if (_tunnelStartedUtc.HasValue && (DateTime.UtcNow - _tunnelStartedUtc.Value).TotalSeconds < 25)
             {
                 return;
             }
@@ -294,20 +347,91 @@ namespace WireFox.Services
             HandshakeUpdated?.Invoke(handshake);
 
             var profile = config.GetProfile(targetInterface);
-            if (handshake != null && (DateTime.UtcNow - handshake.Value).TotalSeconds <= profile.HandshakeTimeoutSeconds)
+            bool handshakeStale = false;
+            if (handshake == null || (DateTime.UtcNow - handshake.Value).TotalSeconds > profile.HandshakeTimeoutSeconds)
             {
-                // Healthy handshake received; reset warning flag
+                handshakeStale = true;
+            }
+
+            // Flow signature check: TX rising with zero RX response
+            var details = await cli.GetTunnelDetailsAsync(targetInterface);
+            bool flowBlackholed = false;
+            if (_lastTxBytes > 0 && details.TransferTxBytes > _lastTxBytes + 5000 && details.TransferRxBytes == _lastRxBytes)
+            {
+                flowBlackholed = true;
+            }
+            _lastTxBytes = details.TransferTxBytes;
+            _lastRxBytes = details.TransferRxBytes;
+
+            // Probe internet connectivity (DNS / HTTP 204)
+            bool internetHealthy = await CheckInternetHealthAsync();
+
+            if (internetHealthy && !handshakeStale)
+            {
+                _consecutiveFailures = 0;
                 _blockedWarningSent = false;
                 return;
             }
 
-            // Handshake is missing or stale
-            if (!_blockedWarningSent)
+            // If internet probe failed or handshake is stale, check if physical router is reachable
+            bool gatewayReachable = await NetworkMonitorService.Instance.IsLocalGatewayReachableAsync();
+            if (!gatewayReachable)
             {
-                _blockedWarningSent = true;
-                LoggingService.Instance.Warning("WatchdogService", 
-                    $"Handshake stale or missing on '{targetInterface}'. Alerting user.");
-                NotificationService.Instance.ShowWatchdogBlockedPrompt(targetInterface);
+                // Physical network itself is disconnected or down - do not blame WireGuard
+                LoggingService.Instance.Debug("WatchdogService", 
+                    "Local default gateway is unreachable; physical network is offline. Skipping tunnel recovery.");
+                return;
+            }
+
+            // Local router IS reachable, but tunnel traffic is blackholed / dead
+            _consecutiveFailures++;
+            LoggingService.Instance.Warning("WatchdogService", 
+                $"Tunnel degradation detected on '{targetInterface}' (Failures={_consecutiveFailures}, HandshakeStale={handshakeStale}, FlowBlackholed={flowBlackholed}, InternetHealthy={internetHealthy})");
+
+            if (_consecutiveFailures < 2)
+            {
+                // Need 2 consecutive failed intervals (approx 16s) to avoid reacting to temporary glitches
+                return;
+            }
+
+            string action = !string.IsNullOrWhiteSpace(config.ActionOnFailure) ? config.ActionOnFailure.ToLowerInvariant() : "restart";
+
+            switch (action)
+            {
+                case "pause":
+                    LoggingService.Instance.Warning("WatchdogService", "ActionOnFailure='pause'. Pausing tunnel for 15 minutes.");
+                    await PauseTunnelAsync(TimeSpan.FromMinutes(15));
+                    NotificationService.Instance.ShowNotification("VPN Paused (Traffic Blocked)", 
+                        $"Tunnel '{targetInterface}' was paused for 15 minutes because network traffic was blocked.");
+                    break;
+
+                case "prompt":
+                    if (!_blockedWarningSent)
+                    {
+                        _blockedWarningSent = true;
+                        LoggingService.Instance.Warning("WatchdogService", "ActionOnFailure='prompt'. Alerting user via toast.");
+                        NotificationService.Instance.ShowWatchdogBlockedPrompt(targetInterface);
+                    }
+                    break;
+
+                case "restart":
+                default:
+                    _restartTimestamps.RemoveAll(t => DateTime.UtcNow - t > TimeSpan.FromMinutes(3));
+                    if (_restartTimestamps.Count >= 2)
+                    {
+                        LoggingService.Instance.Warning("WatchdogService", 
+                            "Circuit breaker tripped: Repeated tunnel restarts within 3 minutes. Pausing tunnel to avoid loop.");
+                        await PauseTunnelAsync(TimeSpan.FromMinutes(15));
+                        NotificationService.Instance.ShowNotification("VPN Paused (Network Restrictive)", 
+                            "WireGuard was paused for 15 minutes after repeated connection lockups.");
+                        return;
+                    }
+
+                    LoggingService.Instance.Warning("WatchdogService", $"Auto-recovering zombie tunnel '{targetInterface}'...");
+                    await ForceRestartTunnelAsync();
+                    NotificationService.Instance.ShowNotification("WireGuard Restored", 
+                        "WireGuard connection was automatically restored after detecting a driver freeze.");
+                    break;
             }
         }
 
@@ -517,19 +641,58 @@ namespace WireFox.Services
 
         public async Task RestartTunnelAsync()
         {
+            await ForceRestartTunnelAsync();
+        }
+
+        public async Task ForceRestartTunnelAsync()
+        {
             var config = ConfigManager.Instance.Config;
             var cli = WireGuardCliService.Instance;
             string targetInterface = GetEffectiveInterfaceName(config);
             var profile = config.GetProfile(targetInterface);
 
+            LoggingService.Instance.Warning("WatchdogService", $"ForceRestartTunnelAsync executing (Full Reset)...");
             SetStatus(TunnelStatus.Connecting);
-            await cli.StopTunnelAsync(targetInterface);
+
+            // Wipe out ALL WireGuard hooks globally before restarting the primary tunnel
+            await cli.StopAllTunnelsAsync();
             await Task.Delay(1000);
+
             _tunnelStartedUtc = DateTime.UtcNow;
+            _consecutiveFailures = 0;
             _blockedWarningSent = false;
+            _restartTimestamps.Add(DateTime.UtcNow);
+
+            // Relaunch the WireGuard UI first so the manager is ready
+            if (!string.IsNullOrEmpty(cli.WireGuardExePath))
+            {
+                try
+                {
+                    Process.Start(new ProcessStartInfo
+                    {
+                        FileName = cli.WireGuardExePath,
+                        UseShellExecute = true
+                    });
+                    await Task.Delay(1000); // Give the UI a second to initialize
+                }
+                catch { }
+            }
+
             await cli.StartTunnelAsync(targetInterface, profile.WireGuardConfigPath);
             await Task.Delay(2000);
             await RefreshStatusAsync();
+        }
+
+        public async Task KillAllWireGuardAsync()
+        {
+            var cli = WireGuardCliService.Instance;
+            LoggingService.Instance.Warning("WatchdogService", "KillAllWireGuardAsync invoked: force-stopping all tunnels!");
+            _isManuallyDisabled = true;
+            SetStatus(TunnelStatus.Disconnected);
+            await cli.StopAllTunnelsAsync();
+            await RefreshStatusAsync();
+            NotificationService.Instance.ShowNotification("WireGuard Force Stopped", 
+                "All WireGuard tunnels and kernel hooks were forcefully stopped. Normal network routing restored.");
         }
 
         public async Task ToggleTunnelManualAsync()

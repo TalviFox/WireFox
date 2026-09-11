@@ -57,7 +57,21 @@ namespace WireFox.ViewModels
             : $"Tunnel Configuration ({InterfaceName})";
 
         public List<string> Themes { get; } = new() { "System", "Light", "Dark" };
+        public List<string> FailureActions { get; } = new() { "Auto-Recover (Restart)", "Auto-Pause (15 Mins)", "Prompt Only" };
         public ObservableCollection<string> AvailableTunnels { get; } = new();
+
+        private string _actionOnFailure = "Auto-Recover (Restart)";
+        public string ActionOnFailure
+        {
+            get => _actionOnFailure;
+            set
+            {
+                if (SetProperty(ref _actionOnFailure, value))
+                {
+                    AutoSave();
+                }
+            }
+        }
 
         public string InterfaceName
         {
@@ -439,6 +453,14 @@ namespace WireFox.ViewModels
             _checkForUpdates = config.CheckForUpdates;
             OnPropertyChanged(nameof(CheckForUpdates));
 
+            _actionOnFailure = config.ActionOnFailure switch
+            {
+                "pause" => "Auto-Pause (15 Mins)",
+                "prompt" => "Prompt Only",
+                _ => "Auto-Recover (Restart)"
+            };
+            OnPropertyChanged(nameof(ActionOnFailure));
+
             _isInitialSetup = ConfigManager.Instance.IsFirstRun || !config.InitialSetupCompleted;
             OnPropertyChanged(nameof(IsInitialSetup));
             OnPropertyChanged(nameof(InitialSetupPromptText));
@@ -636,6 +658,12 @@ namespace WireFox.ViewModels
             config.Theme = SelectedTheme;
             config.StartMinimized = StartMinimized;
             config.StartWithWindows = StartWithWindows;
+            config.ActionOnFailure = ActionOnFailure switch
+            {
+                "Auto-Pause (15 Mins)" => "pause",
+                "Prompt Only" => "prompt",
+                _ => "restart"
+            };
 
             ConfigManager.Instance.Save(config);
         }

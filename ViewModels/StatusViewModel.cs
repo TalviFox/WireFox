@@ -271,7 +271,7 @@ namespace WireFox.ViewModels
             {
                 parts.Add($"Domain: {state.DnsSuffix}");
             }
-            GatewayInfoText = string.Join("  •  ", parts);
+            GatewayInfoText = string.Join("  \u2022  ", parts);
 
             CanTrustCurrentNetwork = !state.IsTrusted && (!string.IsNullOrEmpty(state.Ssid) || !string.IsNullOrEmpty(state.GatewayIp));
             CanUntrustCurrentNetwork = state.IsTrusted && (!string.IsNullOrEmpty(state.Ssid) || !string.IsNullOrEmpty(state.GatewayIp));

@@ -3,11 +3,16 @@
 # This script runs independently of WireFox.exe to audit its binary integrity directly against GitHub.
 
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+[Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+$OutputEncoding = [System.Text.Encoding]::UTF8
 $ErrorActionPreference = "Stop"
+
+$foxEmoji = [char]::ConvertFromUtf32(0x1F98A)
+$bullet = [char]0x2022
 
 Write-Host @"
   =============================================================
-     🦊 WireFox Binary Integrity Auditor
+     $foxEmoji WireFox Binary Integrity Auditor
      Independent External Audit Anchor (GitHub TLS)
   =============================================================
 "@ -ForegroundColor DarkCyan
@@ -128,11 +133,11 @@ Write-Host "   AUDIT VERDICT:" -ForegroundColor White
 if ($matchedRelease) {
     if ($matchedRelease.tag_name -eq $latestRelease.tag_name) {
         Write-Host "   [+] VERIFIED: Binary matches the latest official GitHub release ($($matchedRelease.tag_name))." -ForegroundColor Green
-        Write-Host "       Integrity: 100% Match • Untampered • Up to date" -ForegroundColor Green
+        Write-Host "       Integrity: 100% Match $bullet Untampered $bullet Up to date" -ForegroundColor Green
     }
     else {
         Write-Host "   [i] VERIFIED (HISTORICAL): Binary matches official release ($($matchedRelease.tag_name))." -ForegroundColor Cyan
-        Write-Host "       Integrity: 100% Match • Untampered" -ForegroundColor Cyan
+        Write-Host "       Integrity: 100% Match $bullet Untampered" -ForegroundColor Cyan
         Write-Host "       Notice: A newer official release ($($latestRelease.tag_name)) is available on GitHub." -ForegroundColor Yellow
     }
 }

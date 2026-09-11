@@ -15,10 +15,11 @@
     <Authors>FoxDen Software</Authors>
     <Description>Automated roaming and trusted network watchdog for WireGuard on Windows</Description>
     <Copyright>Copyright (c) 2026 FoxDen Software</Copyright>
-    <Version>1.0.3</Version>
+    <Version>1.0.4</Version>
     <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
     <IncludeAllContentForSelfExtract>true</IncludeAllContentForSelfExtract>
     <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
+    <CodePage>65001</CodePage>
   </PropertyGroup>
 
   <ItemGroup>
@@ -41,6 +42,16 @@
     <PackageReference Include="System.ServiceProcess.ServiceController" Version="8.0.0" />
   </ItemGroup>
 </Project>
+
+
+
+
+
+
+
+
+
+
 
 
 

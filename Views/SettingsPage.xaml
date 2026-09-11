@@ -252,6 +252,29 @@
                 </StackPanel>
             </ui:CardControl>
 
+            <!-- Failure Remediation Policy -->
+            <ui:CardControl Padding="16" Margin="0,0,0,18">
+                <ui:CardControl.Header>
+                    <Grid Margin="0,0,16,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <ui:SymbolIcon Symbol="ShieldError24" FontSize="20" Margin="0,0,12,0" VerticalAlignment="Center" Foreground="{DynamicResource SystemAccentColorPrimaryBrush}" />
+                        <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                            <ui:TextBlock Text="Tunnel Freeze / Lockup Action" FontWeight="SemiBold" FontSize="14" />
+                            <ui:TextBlock Text="What WireFox should do when a kernel driver freeze, handshake loss, or traffic blackhole is detected." 
+                                          FontSize="12" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="0,2,0,0" TextWrapping="Wrap" />
+                        </StackPanel>
+                    </Grid>
+                </ui:CardControl.Header>
+                <ComboBox ItemsSource="{Binding FailureActions}" 
+                          SelectedItem="{Binding ActionOnFailure}" 
+                          MinWidth="190"
+                          MinHeight="36"
+                          HorizontalAlignment="Right" />
+            </ui:CardControl>
+
             <!-- Section 2: Preferences -->
             <ui:TextBlock Text="Preferences" FontSize="15" FontWeight="SemiBold" Margin="0,4,0,10" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
 
@@ -432,7 +455,7 @@
             </ui:Card>
 
             <!-- Section 4: About WireFox -->
-            <ui:TextBlock Text="About • FoxDen Software" FontSize="15" FontWeight="SemiBold" Margin="0,16,0,10" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+            <ui:TextBlock Text="About &#x2022; FoxDen Software" FontSize="15" FontWeight="SemiBold" Margin="0,16,0,10" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
 
             <ui:Card Padding="20" Margin="0,0,0,24">
                 <Grid>
@@ -463,16 +486,16 @@
                                     <ui:TextBlock Text="License: PolyForm Perimeter" FontSize="11" FontWeight="SemiBold" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
                                 </Border>
                             </WrapPanel>
-                            <ui:TextBlock Text="Copyright © 2026 FoxDen Software • Automated WireGuard Roaming Assistant" 
+                            <ui:TextBlock Text="Copyright &#xA9; 2026 FoxDen Software &#x2022; Automated WireGuard Roaming Assistant" 
                                           FontSize="12" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="0,4,0,0" />
                         </StackPanel>
                     </Grid>
 
                     <Border Grid.Row="1" Margin="0,14,0,0" Padding="0,12,0,0" BorderThickness="0,1,0,0" BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}">
                         <StackPanel>
-                            <ui:TextBlock Text="Developed and maintained by FoxDen Software. Source-available under PolyForm Perimeter License 1.0.0 — free to inspect, fork, and use; commercial competition/repackaging prohibited." 
+                            <ui:TextBlock Text="Developed and maintained by FoxDen Software. Source-available under PolyForm Perimeter License 1.0.0 &#x2014; free to inspect, fork, and use; commercial competition/repackaging prohibited." 
                                           FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="0,0,0,6" TextWrapping="Wrap" />
-                            <ui:TextBlock Text="WireGuard® is a registered trademark of Jason A. Donenfeld. WireFox is an independent companion tool and is not affiliated with, endorsed by, or sponsored by Jason A. Donenfeld or the WireGuard development team." 
+                            <ui:TextBlock Text="WireGuard&#xAE; is a registered trademark of Jason A. Donenfeld. WireFox is an independent companion tool and is not affiliated with, endorsed by, or sponsored by Jason A. Donenfeld or the WireGuard development team." 
                                           FontSize="11" Foreground="{DynamicResource TextFillColorTertiaryBrush}" TextWrapping="Wrap" />
                         </StackPanel>
                     </Border>

@@ -34,7 +34,7 @@ namespace WireFox.Models
         public int HandshakeTimeoutSeconds { get; set; } = 180;
 
         [JsonPropertyName("action_on_failure")]
-        public string ActionOnFailure { get; set; } = "prompt";
+        public string ActionOnFailure { get; set; } = "restart";
 
         [JsonPropertyName("theme")]
         public string Theme { get; set; } = "system";
