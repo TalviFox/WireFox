@@ -12,19 +12,19 @@
   <meta name="author" content="FoxDen Software">
   <meta name="robots" content="index, follow">
   <meta name="theme-color" content="#080b11">
-  <link rel="canonical" href="https://talvifox.github.io/WireFox/">
+  <link rel="canonical" href="https://wirefox.foxdensoftware.dev/">
   <meta name="google-site-verification" content="google1f8c704f103a1bce">
 
   <!-- Open Graph / Facebook / Discord -->
   <meta property="og:type" content="website">
-  <meta property="og:url" content="https://talvifox.github.io/WireFox/">
+  <meta property="og:url" content="https://wirefox.foxdensoftware.dev/">
   <meta property="og:title" content="WireFox | VPN Roaming">
   <meta property="og:description" content="Intelligent background companion for WireGuard on Windows 10 & 11. Auto-disconnects on trusted home Wi-Fi, auto-connects on untrusted networks, prevents gateway ARP spoofing, and recovers stalled tunnels.">
   <meta property="og:image" content="https://raw.githubusercontent.com/TalviFox/WireFox/main/wirefox_icon.png">
 
   <!-- Twitter / X -->
   <meta property="twitter:card" content="summary_large_image">
-  <meta property="twitter:url" content="https://talvifox.github.io/WireFox/">
+  <meta property="twitter:url" content="https://wirefox.foxdensoftware.dev/">
   <meta property="twitter:title" content="WireFox | VPN Roaming">
   <meta property="twitter:description" content="Intelligent background companion for WireGuard on Windows 10 & 11. Auto-disconnects on trusted home Wi-Fi, auto-connects on untrusted networks, and guards against gateway ARP spoofing.">
   <meta property="twitter:image" content="https://raw.githubusercontent.com/TalviFox/WireFox/main/wirefox_icon.png">
@@ -51,7 +51,7 @@
     "applicationCategory": "SecurityApplication",
     "description": "Automated roaming and watchdog manager for WireGuard on Windows laptops and desktops.",
     "license": "https://github.com/TalviFox/WireFox/blob/main/LICENSE",
-    "url": "https://talvifox.github.io/WireFox/",
+    "url": "https://wirefox.foxdensoftware.dev/",
     "downloadUrl": "https://github.com/TalviFox/WireFox/releases",
     "softwareVersion": "1.0.5",
     "author": {
@@ -90,7 +90,7 @@
         <button class="mobile-notice-close" id="mobile-notice-close" aria-label="Dismiss notice">&times;</button>
       </div>
     </div>
-    <span id="site-url-hidden" style="display:none;">https://talvifox.github.io/WireFox/</span>
+    <span id="site-url-hidden" style="display:none;">https://wirefox.foxdensoftware.dev/</span>
   </aside>
 
   <!-- Site Header & Navigation -->
@@ -454,13 +454,42 @@
         </div>
 
         <div class="install-tabs-nav">
-          <button class="install-tab-btn active" data-pane="pane-ps" id="install-tab-ps">⚡ One-Line PowerShell</button>
+          <button class="install-tab-btn active" data-pane="pane-winget" id="install-tab-winget">🪟 WinGet</button>
+          <button class="install-tab-btn" data-pane="pane-ps" id="install-tab-ps">⚡ One-Line PowerShell</button>
           <button class="install-tab-btn" data-pane="pane-manual" id="install-tab-manual">📦 Manual Download</button>
           <button class="install-tab-btn" data-pane="pane-verify" id="install-tab-verify">🔒 Verify Integrity</button>
         </div>
 
+        <!-- Pane 0: WinGet -->
+        <div class="install-pane active" id="pane-winget">
+          <div class="install-step-list">
+            <div class="install-step">
+              <div class="step-num">1</div>
+              <div class="step-content">
+                <h4>Install via Windows Package Manager</h4>
+                <p>Run the official package command in PowerShell or Windows Terminal:</p>
+                <div class="terminal-command-box">
+                  <span class="terminal-prefix">&gt;</span>
+                  <code class="terminal-code" id="winget-pane-code">winget install FoxDenSoftware.WireFox</code>
+                  <button class="btn-copy" data-target="winget-pane-code" id="copy-winget-pane-btn" aria-label="Copy WinGet command">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                    <span>Copy</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+            <div class="install-step">
+              <div class="step-num">2</div>
+              <div class="step-content">
+                <h4>Launch &amp; Configure</h4>
+                <p>Launch <code style="color:var(--brand-frost)">WireFox</code> from your Start Menu or Terminal. Head to <strong>Settings</strong> to pick your WireGuard profile and configure your <strong>Trusted Networks</strong>.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
         <!-- Pane 1: PowerShell One-Liner -->
-        <div class="install-pane active" id="pane-ps">
+        <div class="install-pane" id="pane-ps">
           <div class="install-step-list">
             <div class="install-step">
               <div class="step-num">1</div>

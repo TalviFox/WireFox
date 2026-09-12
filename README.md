@@ -12,6 +12,7 @@
     <a href="LICENSE"><img src="https://img.shields.io/badge/License-PolyForm_Perimeter_1.0.0-blue.svg" alt="License: PolyForm Perimeter 1.0.0" /></a>
     <img src="https://img.shields.io/badge/.NET-10.0-purple.svg" alt=".NET 10.0" />
     <img src="https://img.shields.io/badge/Platform-Windows%2010%20%7C%2011-0078D6.svg" alt="Windows 10 / 11" />
+    <a href="https://github.com/microsoft/winget-pkgs/pull/433833"><img src="https://img.shields.io/badge/WinGet-FoxDenSoftware.WireFox-blue?logo=windows&logoColor=white" alt="WinGet Package" /></a>
     <a href="https://github.com/TalviFox/WireFox/releases"><img src="https://img.shields.io/github/downloads/TalviFox/WireFox/total?color=orange&label=Downloads" alt="GitHub Downloads" /></a>
   </p>
 </div>
@@ -56,6 +57,12 @@ On Windows, however, laptops have historically lacked intelligent roaming. Users
 ### Requirements
 - **Windows 10 (version 19041+) or Windows 11**
 - **Official WireGuard for Windows** installed ([wireguard.com/install](https://www.wireguard.com/install/))
+
+### 🪟 Windows Package Manager (WinGet)
+
+```powershell
+winget install FoxDenSoftware.WireFox
+```
 
 ### ⚡ One-Line Install (PowerShell)
 
