@@ -454,20 +454,20 @@
         </div>
 
         <div class="install-tabs-nav">
-          <button class="install-tab-btn active" data-pane="pane-winget" id="install-tab-winget">🪟 WinGet</button>
-          <button class="install-tab-btn" data-pane="pane-ps" id="install-tab-ps">⚡ One-Line PowerShell</button>
+          <button class="install-tab-btn active" data-pane="pane-ps" id="install-tab-ps">⚡ One-Line PowerShell</button>
           <button class="install-tab-btn" data-pane="pane-manual" id="install-tab-manual">📦 Manual Download</button>
+          <button class="install-tab-btn" data-pane="pane-winget" id="install-tab-winget">🪟 WinGet <small style="opacity:0.6; font-size:0.75em; font-weight:normal;">(Coming Soon)</small></button>
           <button class="install-tab-btn" data-pane="pane-verify" id="install-tab-verify">🔒 Verify Integrity</button>
         </div>
 
         <!-- Pane 0: WinGet -->
-        <div class="install-pane active" id="pane-winget">
+        <div class="install-pane" id="pane-winget">
           <div class="install-step-list">
             <div class="install-step">
               <div class="step-num">1</div>
               <div class="step-content">
-                <h4>Install via Windows Package Manager</h4>
-                <p>Run the official package command in PowerShell or Windows Terminal:</p>
+                <h4>Windows Package Manager <span style="font-size:0.75rem; font-weight:normal; opacity:0.6; margin-left:6px;">(Pending Approval)</span></h4>
+                <p>Pending Microsoft repository approval. Once merged, it will be available directly via:</p>
                 <div class="terminal-command-box">
                   <span class="terminal-prefix">&gt;</span>
                   <code class="terminal-code" id="winget-pane-code">winget install FoxDenSoftware.WireFox</code>
@@ -476,6 +476,9 @@
                     <span>Copy</span>
                   </button>
                 </div>
+                <p style="font-size:0.82rem; opacity:0.6; margin-top:0.6rem; margin-bottom:0;">
+                  In the meantime, please use the <strong>⚡ One-Line PowerShell</strong> or <strong>📦 Manual Download</strong> tab above.
+                </p>
               </div>
             </div>
             <div class="install-step">
@@ -489,7 +492,7 @@
         </div>
 
         <!-- Pane 1: PowerShell One-Liner -->
-        <div class="install-pane" id="pane-ps">
+        <div class="install-pane active" id="pane-ps">
           <div class="install-step-list">
             <div class="install-step">
               <div class="step-num">1</div>
