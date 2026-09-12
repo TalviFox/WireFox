@@ -41,7 +41,7 @@ On Windows, however, laptops have historically lacked intelligent roaming. Users
   - Detects silent UDP drops, captive portals, and dead tunnels.
   - Built-in timer controls: pause protection for 15 minutes or temporarily switch to split-tunnel mode.
 - 💻 **Native Windows Experience**
-  - Built with modern **WPF** and **Mica/Fluent Design** (dark/light themes).
+  - Built with modern **WPF** and clean Windows 10/11 dark/light themes.
   - Sits quietly in the Windows System Tray with quick controls.
   - Native Windows Toast notifications with actionable inline buttons.
   - Starts silently on Windows boot via elevated Scheduled Task without annoying UAC prompts.
@@ -155,5 +155,11 @@ For full license terms, see the [LICENSE](LICENSE) file or visit [PolyForm Proje
 
 ## 🏷️ Trademarks & Attribution
 
-- **WireGuard®** is a registered trademark of **Jason A. Donenfeld**.
+- **[WireGuard®](https://www.wireguard.com)** is a registered trademark of **Jason A. Donenfeld**.
 - **WireFox** is an independent companion project developed by **FoxDen Software**. It is not affiliated with, endorsed by, or sponsored by Jason A. Donenfeld or the official WireGuard development team.
+
+---
+
+## 🛡️ Early Access & Security Notice
+
+WireFox is independent, early-access utility software provided on an **"AS IS" and "AS AVAILABLE" basis, without warranties of any kind**, express or implied. While WireFox is actively maintained, dogfooded daily, and designed to automate and protect WireGuard connections, local network environments (such as captive portals, hotel Wi-Fi, and adapter driver states) can vary widely. Users are solely responsible for ensuring their network environment and personal data security requirements are satisfied.

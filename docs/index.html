@@ -1,0 +1,702 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <!-- Primary SEO Meta Tags -->
+  <title>WireFox | VPN Roaming</title>
+  <meta name="title" content="WireFox | VPN Roaming">
+  <meta name="description" content="Intelligent background companion for WireGuard on Windows 10 & 11. Auto-disconnects on trusted home Wi-Fi, auto-connects on untrusted networks, prevents gateway ARP spoofing, and recovers stalled tunnels.">
+  <meta name="keywords" content="WireGuard Windows, WireGuard auto connect, WireGuard roaming, WireGuard watchdog, WireGuard system tray, WireGuard Wi-Fi automation, WireGuard on demand Windows, ARP anti-spoofing">
+  <meta name="author" content="FoxDen Software">
+  <meta name="robots" content="index, follow">
+  <meta name="theme-color" content="#080b11">
+  <link rel="canonical" href="https://talvifox.github.io/WireFox/">
+
+  <!-- Open Graph / Facebook / Discord -->
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://talvifox.github.io/WireFox/">
+  <meta property="og:title" content="WireFox | VPN Roaming">
+  <meta property="og:description" content="Intelligent background companion for WireGuard on Windows 10 & 11. Auto-disconnects on trusted home Wi-Fi, auto-connects on untrusted networks, prevents gateway ARP spoofing, and recovers stalled tunnels.">
+  <meta property="og:image" content="https://raw.githubusercontent.com/TalviFox/WireFox/main/wirefox_icon.png">
+
+  <!-- Twitter / X -->
+  <meta property="twitter:card" content="summary_large_image">
+  <meta property="twitter:url" content="https://talvifox.github.io/WireFox/">
+  <meta property="twitter:title" content="WireFox | VPN Roaming">
+  <meta property="twitter:description" content="Intelligent background companion for WireGuard on Windows 10 & 11. Auto-disconnects on trusted home Wi-Fi, auto-connects on untrusted networks, and guards against gateway ARP spoofing.">
+  <meta property="twitter:image" content="https://raw.githubusercontent.com/TalviFox/WireFox/main/wirefox_icon.png">
+
+  <!-- Favicon -->
+  <link rel="icon" type="image/x-icon" href="assets/favicon.ico">
+  <link rel="icon" type="image/png" href="assets/wirefox_icon.png">
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <!-- Stylesheet -->
+  <link rel="stylesheet" href="css/style.css?v=1.4">
+
+  <!-- Schema.org JSON-LD for Search Engines -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    "name": "WireFox",
+    "operatingSystem": "Windows 10, Windows 11",
+    "applicationCategory": "SecurityApplication",
+    "description": "Automated roaming and watchdog manager for WireGuard on Windows laptops and desktops.",
+    "license": "https://github.com/TalviFox/WireFox/blob/main/LICENSE",
+    "url": "https://talvifox.github.io/WireFox/",
+    "downloadUrl": "https://github.com/TalviFox/WireFox/releases",
+    "softwareVersion": "1.0.5",
+    "author": {
+      "@type": "Organization",
+      "name": "FoxDen Software",
+      "url": "https://github.com/TalviFox"
+    },
+    "offers": {
+      "@type": "Offer",
+      "price": "0",
+      "priceCurrency": "USD"
+    }
+  }
+  </script>
+</head>
+<body>
+
+  <!-- Mobile Notice Banner (Polite reminder for phone/tablet visitors) -->
+  <aside class="mobile-notice-banner" id="mobile-notice" aria-label="Desktop application notice" style="display: none;">
+    <div class="container mobile-notice-inner">
+      <div class="mobile-notice-content">
+        <span class="mobile-notice-badge">Windows 10 &amp; 11 Utility</span>
+        <p class="mobile-notice-message">
+          <strong>Visiting from mobile?</strong> WireFox is built exclusively for Windows desktop PCs. You are welcome to grab the download or copy the link to open on your PC. Feel free to explore all features, architecture, and diagnostics below!
+        </p>
+      </div>
+      <div class="mobile-notice-actions">
+        <a href="https://github.com/TalviFox/WireFox/releases/latest" class="btn-mobile-action btn-mobile-dl" id="mobile-download-btn" title="Download WireFox executable">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+          <span>Download</span>
+        </a>
+        <button class="btn-copy btn-mobile-action btn-mobile-copy" data-target="site-url-hidden" id="mobile-copy-btn" aria-label="Copy page link">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+          <span>Copy Page Link</span>
+        </button>
+        <button class="mobile-notice-close" id="mobile-notice-close" aria-label="Dismiss notice">&times;</button>
+      </div>
+    </div>
+    <span id="site-url-hidden" style="display:none;">https://talvifox.github.io/WireFox/</span>
+  </aside>
+
+  <!-- Site Header & Navigation -->
+  <header class="site-header">
+    <div class="container site-nav">
+      <a href="#" class="nav-brand" id="nav-brand">
+        <img src="assets/wirefox_icon.png" alt="WireFox Logo" class="nav-logo">
+        <span class="brand-text">Wire<span>Fox</span></span>
+      </a>
+
+      <ul class="nav-links">
+        <li><a href="#features" class="nav-link">Features</a></li>
+        <li><a href="#showcase" class="nav-link">Screenshots</a></li>
+        <li><a href="#why-wirefox" class="nav-link">Why WireFox</a></li>
+        <li><a href="#install" class="nav-link">Install</a></li>
+        <li><a href="#faq" class="nav-link">FAQ</a></li>
+      </ul>
+
+      <div class="nav-actions">
+        <a href="https://github.com/TalviFox/WireFox" target="_blank" rel="noopener noreferrer" class="btn-github" id="nav-github-btn" title="View Source on GitHub">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/>
+          </svg>
+          <span>GitHub</span>
+        </a>
+        <a href="https://github.com/TalviFox/WireFox/releases/latest" class="btn-nav-download" id="nav-download-btn">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+            <polyline points="7 10 12 15 17 10"></polyline>
+            <line x1="12" y1="15" x2="12" y2="3"></line>
+          </svg>
+          <span>Download</span>
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <!-- Hero Section -->
+    <section class="hero-section">
+      <div class="container">
+        <div class="hero-logo-wrap" title="Hitting the button so you don't have to 🦊">
+          <img src="assets/wirefox_icon.png" alt="WireFox Logo" class="hero-logo">
+          <span class="hero-logo-bubble">Hitting the button so you don't have to 🦊</span>
+        </div>
+
+        <h1 class="hero-brand-heading">Wire<span>Fox</span></h1>
+
+        <h2 class="hero-tagline">
+          Intelligent WireGuard&reg; Roaming for Windows.
+        </h2>
+
+        <p class="hero-subtitle">
+          The missing on-demand automation layer for WireGuard&reg;. Automatically bypasses your VPN on trusted home Wi-Fi for full gigabit LAN speeds, and instantly locks down connections the moment you connect to an untrusted network.
+        </p>
+
+        <div class="hero-actions">
+          <div class="hero-btn-row">
+            <a href="https://github.com/TalviFox/WireFox/releases/latest" class="btn-primary" id="hero-download-btn">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                <polyline points="7 10 12 15 17 10"></polyline>
+                <line x1="12" y1="15" x2="12" y2="3"></line>
+              </svg>
+              <span>Download WireFox <span class="release-version-tag">v1.0.5</span></span>
+            </a>
+            <a href="#showcase" class="btn-secondary" id="hero-explore-btn">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
+                <line x1="8" y1="21" x2="16" y2="21"></line>
+                <line x1="12" y1="17" x2="12" y2="21"></line>
+              </svg>
+              <span>Explore Interface</span>
+            </a>
+          </div>
+
+          <!-- Quick 1-line PowerShell install -->
+          <div class="terminal-command-box" title="Click button to copy install command">
+            <span class="terminal-prefix">PS &gt;</span>
+            <code class="terminal-code" id="ps-install-code">irm https://raw.githubusercontent.com/TalviFox/WireFox/main/install.ps1 | iex</code>
+            <button class="btn-copy" data-target="ps-install-code" id="hero-copy-btn" aria-label="Copy PowerShell command">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+              </svg>
+              <span>Copy</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="trust-bar">
+          <div class="trust-item">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+            </svg>
+            <span>Hardware Gateway MAC (ARP) Anti-Spoofing</span>
+          </div>
+          <div class="trust-item">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="10"></circle>
+              <polyline points="12 6 12 12 16 14"></polyline>
+            </svg>
+            <span>Kernel Handshake Watchdog</span>
+          </div>
+          <div class="trust-item">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="10"></circle>
+              <line x1="4.93" y1="4.93" x2="19.07" y2="19.07"></line>
+            </svg>
+            <span>Zero Telemetry & Zero Ads</span>
+          </div>
+          <div class="trust-item">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+              <polyline points="14 2 14 8 20 8"></polyline>
+              <line x1="16" y1="13" x2="8" y2="13"></line>
+              <line x1="16" y1="17" x2="8" y2="17"></line>
+              <polyline points="10 9 9 9 8 9"></polyline>
+            </svg>
+            <span>PolyForm Perimeter 1.0.0</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Showcase / Screenshots Section -->
+    <section class="showcase-section" id="showcase">
+      <div class="container">
+        <div class="section-header">
+          <span class="section-tag">Visual Tour</span>
+          <h2 class="section-title">Sleek, Fast &amp; Windows Native</h2>
+          <p class="section-desc">Designed with modern dark WPF styling, native system tray integration, and zero clutter.</p>
+        </div>
+
+        <!-- Showcase Tabs -->
+        <div class="showcase-nav">
+          <button class="showcase-tab active" data-slide="slide-status" data-title="Status & Live Controls" data-desc="Real-time tunnel state, active network details, and instant 15-minute pause controls.">
+            Status Dashboard
+          </button>
+          <button class="showcase-tab" data-slide="slide-trusted" data-title="Trusted Networks & Hardware Gateways" data-desc="Add home Wi-Fi SSIDs and hardware gateway MAC addresses for spoof-proof LAN recognition.">
+            Trusted Networks
+          </button>
+          <button class="showcase-tab" data-slide="slide-diag" data-title="Kernel Watchdog & Diagnostics" data-desc="Inspect active WireGuard tunnel interfaces, handshake status, and live subsystem event logs.">
+            Diagnostics & Logs
+          </button>
+          <button class="showcase-tab" data-slide="slide-settings" data-title="Granular Preferences" data-desc="Configure per-tunnel timeouts, split-tunnel rules, auto-recovery on driver freeze, and elevated startup.">
+            Settings & Startup
+          </button>
+          <button class="showcase-tab" data-slide="slide-integrity" data-title="Cryptographic Integrity & Updates" data-desc="Transparent local SHA-256 binary validation matched directly against GitHub Releases.">
+            Binary Integrity
+          </button>
+        </div>
+
+        <!-- Window Frame Container -->
+        <div class="window-frame">
+          <div class="showcase-viewport">
+            <div class="showcase-slide active" id="slide-status">
+              <img src="assets/screenshots/WireFox Main Screen.png" alt="WireFox Main Screen Interface" loading="lazy">
+            </div>
+            <div class="showcase-slide" id="slide-trusted">
+              <img src="assets/screenshots/WireFox Trusted Networks 1.png" alt="WireFox Trusted Networks Page" loading="lazy">
+            </div>
+            <div class="showcase-slide" id="slide-diag">
+              <img src="assets/screenshots/WireFox Diagnostics.png" alt="WireFox Diagnostics and Logs" loading="lazy">
+            </div>
+            <div class="showcase-slide" id="slide-settings">
+              <img src="assets/screenshots/WireFox Settings 1.png" alt="WireFox Settings and Preferences" loading="lazy">
+            </div>
+            <div class="showcase-slide" id="slide-integrity">
+              <img src="assets/screenshots/WireFox Settings 2.png" alt="WireFox Updates and SHA-256 Checksum Audit" loading="lazy">
+            </div>
+          </div>
+
+          <div class="showcase-caption">
+            <div>
+              <div class="caption-title" id="caption-title">Status & Live Controls</div>
+              <div class="caption-desc" id="caption-desc">Real-time tunnel state, active network details, and instant 15-minute pause controls.</div>
+            </div>
+            <a href="https://github.com/TalviFox/WireFox/releases/latest" class="btn-primary" style="padding: 8px 18px; font-size: 0.9rem;">
+              Download WireFox
+            </a>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Features Section -->
+    <section class="features-section" id="features">
+      <div class="container">
+        <div class="section-header">
+          <span class="section-tag">Core Capabilities</span>
+          <h2 class="section-title">Engineered for WireGuard Power Users</h2>
+          <p class="section-desc">WireGuard is unmatched in speed and cryptography, but Windows lacks native roaming intelligence. WireFox fills every gap.</p>
+        </div>
+
+        <div class="features-grid">
+          <!-- Feature 1 -->
+          <div class="feature-card">
+            <div class="feature-icon-box">
+              <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M5 12.55a11 11 0 0 1 14.08 0"></path>
+                <path d="M1.42 9a16 16 0 0 1 21.16 0"></path>
+                <path d="M8.53 16.11a6 6 0 0 1 6.95 0"></path>
+                <line x1="12" y1="20" x2="12.01" y2="20"></line>
+              </svg>
+            </div>
+            <h3 class="feature-title">Intelligent Network Roaming</h3>
+            <p class="feature-desc">
+              Automatically disconnects WireGuard when you arrive home to restore full gigabit local network speed, and automatically spins the tunnel back up the second you roam onto an untrusted Wi-Fi hotspot or mobile tether.
+            </p>
+          </div>
+
+          <!-- Feature 2 -->
+          <div class="feature-card">
+            <div class="feature-icon-box">
+              <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+                <path d="M9 12l2 2 4-4"></path>
+              </svg>
+            </div>
+            <h3 class="feature-title">Hardware Gateway MAC (ARP) Defense</h3>
+            <p class="feature-desc">
+              SSID names can easily be cloned by rogue evil-twin access points. WireFox queries your router's physical MAC address via Windows <code style="color:var(--brand-orange)">iphlpapi.dll SendARP</code> to ensure your trusted network is physically genuine.
+            </p>
+          </div>
+
+          <!-- Feature 3 -->
+          <div class="feature-card">
+            <div class="feature-icon-box">
+              <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10"></circle>
+                <polyline points="12 6 12 12 16 14"></polyline>
+              </svg>
+            </div>
+            <h3 class="feature-title">Kernel Handshake Watchdog</h3>
+            <p class="feature-desc">
+              Silent UDP packet drops, captive portals, and hotel splash screens can leave WireGuard in a "zombie" state. WireFox actively monitors kernel handshake timestamps and automatically re-engages stalled tunnels.
+            </p>
+          </div>
+
+          <!-- Feature 4 -->
+          <div class="feature-card">
+            <div class="feature-icon-box">
+              <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
+                <line x1="8" y1="21" x2="16" y2="21"></line>
+                <line x1="12" y1="17" x2="12" y2="21"></line>
+              </svg>
+            </div>
+            <h3 class="feature-title">Interactive System Tray Daemon</h3>
+            <p class="feature-desc">
+              Runs quietly in your Windows taskbar with real-time status badges (Green = Protected, Orange = Paused). Right-click for instant emergency controls without opening the app: Force-Kill WireGuard, toggle 15-minute pause/split-tunnel, or view live countdown tooltips. Starts silently on boot with zero UAC prompts.
+            </p>
+          </div>
+
+          <!-- Feature 5 -->
+          <div class="feature-card">
+            <div class="feature-icon-box">
+              <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10"></circle>
+                <line x1="10" y1="15" x2="10" y2="9"></line>
+                <line x1="14" y1="15" x2="14" y2="9"></line>
+              </svg>
+            </div>
+            <h3 class="feature-title">15-Minute Pause & Split-Tunneling</h3>
+            <p class="feature-desc">
+              Need to access a captive portal, local printer, or bypass a VPN block temporarily? Hit "Pause 15 Mins" or switch to configured Split-Tunnel AllowedIPs with one click. WireFox automatically re-arms when time is up.
+            </p>
+          </div>
+
+          <!-- Feature 6 -->
+          <div class="feature-card">
+            <div class="feature-icon-box">
+              <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
+                <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
+                <line x1="12" y1="22.08" x2="12" y2="12"></line>
+              </svg>
+            </div>
+            <h3 class="feature-title">Zero Telemetry & Binary Integrity</h3>
+            <p class="feature-desc">
+              No analytics, no cloud accounts, and zero background tracking. All network evaluations happen 100% locally on your machine. WireFox interfaces directly with the official WireGuard Windows CLI tools and includes built-in one-click SHA-256 binary verification against official GitHub releases.
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Why WireFox Section -->
+    <section class="why-section" id="why-wirefox">
+      <div class="container">
+        <div class="section-header">
+          <span class="section-tag">Comparison</span>
+          <h2 class="section-title">Why WireFox?</h2>
+          <p class="section-desc">You shouldn't have to manually flip VPN switches every time you open your laptop. Let a watchful little fox in your tray handle it.</p>
+        </div>
+
+        <div class="comparison-card">
+          <div class="comparison-grid">
+            <div class="comparison-col standard">
+              <div class="comparison-header">
+                <span class="comparison-tag bad">Standard WireGuard on Windows</span>
+                <h3 class="comparison-title">Manual & Fragile</h3>
+              </div>
+              <ul class="comparison-list">
+                <li class="comparison-item cross">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                  <span>Must manually connect/disconnect every time you open your laptop.</span>
+                </li>
+                <li class="comparison-item cross">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                  <span>No concept of "Trusted Wi-Fi", needlessly throttling home LAN transfers through VPN.</span>
+                </li>
+                <li class="comparison-item cross">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                  <span>Silent connection drops leave your internet dead without warning.</span>
+                </li>
+                <li class="comparison-item cross">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                  <span>Requires fragile, complex Task Scheduler scripts that break on updates.</span>
+                </li>
+              </ul>
+            </div>
+
+            <div class="comparison-col wirefox">
+              <div class="comparison-header">
+                <span class="comparison-tag good">WireFox Companion</span>
+                <h3 class="comparison-title">Automated & Resilient</h3>
+              </div>
+              <ul class="comparison-list">
+                <li class="comparison-item check">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                  <span>Seamless on-demand roaming identical to iOS and Android WireGuard clients.</span>
+                </li>
+                <li class="comparison-item check">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                  <span>Auto-bypass on home Wi-Fi and verified gateway MAC hardware.</span>
+                </li>
+                <li class="comparison-item check">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                  <span>Kernel handshake watchdog detects dead routes and auto-recovers.</span>
+                </li>
+                <li class="comparison-item check">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                  <span>Sits quietly in the System Tray with zero UAC prompts and native toasts.</span>
+                </li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Installation & Quick Start Section -->
+    <section class="install-section" id="install">
+      <div class="container">
+        <div class="section-header">
+          <span class="section-tag">Quick Start</span>
+          <h2 class="section-title">Install in Seconds</h2>
+          <p class="section-desc">WireFox requires Windows 10 or 11, plus the official WireGuard client.</p>
+        </div>
+
+        <div class="install-tabs-nav">
+          <button class="install-tab-btn active" data-pane="pane-ps" id="install-tab-ps">⚡ One-Line PowerShell</button>
+          <button class="install-tab-btn" data-pane="pane-manual" id="install-tab-manual">📦 Manual Download</button>
+          <button class="install-tab-btn" data-pane="pane-verify" id="install-tab-verify">🔒 Verify Integrity</button>
+        </div>
+
+        <!-- Pane 1: PowerShell One-Liner -->
+        <div class="install-pane active" id="pane-ps">
+          <div class="install-step-list">
+            <div class="install-step">
+              <div class="step-num">1</div>
+              <div class="step-content">
+                <h4>Run Installer in PowerShell</h4>
+                <p>Open PowerShell as Administrator and paste the following one-line installation command:</p>
+                <div class="terminal-command-box">
+                  <span class="terminal-prefix">PS &gt;</span>
+                  <code class="terminal-code" id="ps-pane-code">irm https://raw.githubusercontent.com/TalviFox/WireFox/main/install.ps1 | iex</code>
+                  <button class="btn-copy" data-target="ps-pane-code" id="copy-ps-pane-btn" aria-label="Copy PowerShell command">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                    <span>Copy</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+            <div class="install-step">
+              <div class="step-num">2</div>
+              <div class="step-content">
+                <h4>Select Your WireGuard Tunnel</h4>
+                <p>WireFox launches automatically. Head to <strong>Settings</strong>, pick your WireGuard profile from the dropdown, and add your home Wi-Fi SSID to <strong>Trusted Networks</strong>. You're done!</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Pane 2: Manual Download -->
+        <div class="install-pane" id="pane-manual">
+          <div class="install-step-list">
+            <div class="install-step">
+              <div class="step-num">1</div>
+              <div class="step-content">
+                <h4>Download the Executable</h4>
+                <p>Grab the latest standalone <code style="color:var(--brand-orange)">WireFox.exe</code> directly from our GitHub Releases:</p>
+                <a href="https://github.com/TalviFox/WireFox/releases/latest" class="btn-primary" style="margin: 8px 0 16px;">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                  <span>Go to Latest GitHub Release</span>
+                </a>
+              </div>
+            </div>
+            <div class="install-step">
+              <div class="step-num">2</div>
+              <div class="step-content">
+                <h4>Launch as Administrator</h4>
+                <p>Because WireFox manages Windows network adapter services and communicates with WireGuard's elevated service manager, Administrator privileges are required.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Pane 3: Cryptographic Audit -->
+        <div class="install-pane" id="pane-verify">
+          <div class="install-step-list">
+            <div class="install-step">
+              <div class="step-num">1</div>
+              <div class="step-content">
+                <h4>Verify Binary Integrity Against GitHub</h4>
+                <p>WireFox is open-source. You can verify that your local binary cryptographically matches the official GitHub release checksums at any time:</p>
+                <div class="terminal-command-box">
+                  <span class="terminal-prefix">PS &gt;</span>
+                  <code class="terminal-code" id="ps-audit-code">irm https://raw.githubusercontent.com/TalviFox/WireFox/main/verify.ps1 | iex</code>
+                  <button class="btn-copy" data-target="ps-audit-code" id="copy-audit-btn" aria-label="Copy verification command">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                    <span>Copy</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+            <div class="install-step">
+              <div class="step-num">2</div>
+              <div class="step-content">
+                <h4>In-App Hash Verification</h4>
+                <p>Inside the app under <strong>Settings &gt; Updates &amp; Binary Integrity</strong>, you can also view your live SHA-256 hash or trigger an external verification check anytime.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- FAQ Accordion Section -->
+    <section class="faq-section" id="faq">
+      <div class="container">
+        <div class="section-header">
+          <span class="section-tag">Got Questions?</span>
+          <h2 class="section-title">Frequently Asked Questions</h2>
+        </div>
+
+        <div class="faq-list">
+          <!-- FAQ 1 -->
+          <div class="faq-item open">
+            <button class="faq-question">
+              <span>Do I still need the official WireGuard app installed?</span>
+              <svg class="faq-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"></polyline></svg>
+            </button>
+            <div class="faq-answer">
+              Yes. WireFox is a companion automation manager, not a standalone VPN client. It works alongside your official WireGuard installation through its standard command-line tools (<code style="color:var(--brand-orange)">wireguard.exe</code> and <code style="color:var(--brand-orange)">wg.exe</code>). WireFox doesn't reimplement the VPN protocol itself. Instead, it ensures your existing WireGuard tunnels connect and disconnect automatically based on your network.
+            </div>
+          </div>
+
+          <!-- FAQ 2: Behind the Scenes -->
+          <div class="faq-item">
+            <button class="faq-question">
+              <span>What is WireFox actually doing behind the scenes?</span>
+              <svg class="faq-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"></polyline></svg>
+            </button>
+            <div class="faq-answer">
+              <strong>Technically:</strong> WireFox listens to Windows network adapter events, verifies router hardware against ARP gateway tables, and manages your WireGuard tunnels via the official CLI.<br><br>
+              <strong>Practically:</strong> Think of it like a vigilant little arctic fox sitting in your system tray, hitting the &ldquo;Connect&rdquo; button for you the split second you step away from trusted home Wi-Fi.
+            </div>
+          </div>
+
+          <!-- FAQ 2 -->
+          <div class="faq-item">
+            <button class="faq-question">
+              <span>Why does WireFox require Administrator permissions?</span>
+              <svg class="faq-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"></polyline></svg>
+            </button>
+            <div class="faq-answer">
+              On Windows, starting and stopping WireGuard tunnel services and querying physical gateway MAC addresses via unmanaged ARP calls requires elevation. WireFox registers an elevated Windows Scheduled Task on boot so it runs seamlessly in the background without prompting you with UAC every time you log in.
+            </div>
+          </div>
+
+          <!-- FAQ 3 -->
+          <div class="faq-item">
+            <button class="faq-question">
+              <span>How does Gateway MAC (ARP) Anti-Spoofing protect me?</span>
+              <svg class="faq-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"></polyline></svg>
+            </button>
+            <div class="faq-answer">
+              If an attacker sets up a malicious rogue Wi-Fi hotspot with the exact same SSID name as your home network, standard Wi-Fi roaming would trust it and bypass your VPN. WireFox queries the physical hardware MAC address of the default gateway router via unmanaged ARP calls. If the MAC doesn't match your configured hardware, WireFox treats the network as untrusted and activates the WireGuard tunnel immediately.<br><br>
+              <span style="display:block; color:var(--text-muted); font-size:0.85rem; line-height:1.5;">* <em>Disclaimer:</em> This is a best-effort defense-in-depth heuristic designed to thwart opportunistic evil-twin hotspots. It should not be considered a formal cryptographic security protocol, as Layer 2 MAC addresses can still be spoofed by an adversary with local packet visibility.</span>
+            </div>
+          </div>
+
+          <!-- FAQ 4 -->
+          <div class="faq-item">
+            <button class="faq-question">
+              <span>Does WireFox collect telemetry, logs, or analytics?</span>
+              <svg class="faq-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"></polyline></svg>
+            </button>
+            <div class="faq-answer">
+              Zero. None whatsoever. WireFox has no tracking SDKs, no external telemetry servers, no accounts, and no analytics. All network evaluations happen 100% locally on your machine.
+            </div>
+          </div>
+
+          <!-- FAQ 5: Antivirus & SmartScreen -->
+          <div class="faq-item">
+            <button class="faq-question">
+              <span>I downloaded the .exe and my antivirus is upset. What gives?</span>
+              <svg class="faq-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"></polyline></svg>
+            </button>
+            <div class="faq-answer">
+              This is a standard false positive common to independent open-source Windows utilities. Commercial Extended Validation (EV) code-signing certificates cost hundreds of dollars each year. Because WireFox is free community software that requests elevation for background task scheduling and queries native network ARP tables, Windows SmartScreen and heuristic AV engines may flag new releases until they accumulate reputation.<br><br>
+              <strong>To proceed:</strong> In Windows SmartScreen, click <em>&ldquo;More info&rdquo; &rarr; &ldquo;Run anyway&rdquo;</em>. You can independently verify the binary's SHA-256 hash against our published GitHub release notes via <code style="color:var(--brand-frost)">verify.ps1</code> or <code style="color:var(--brand-frost)">Get-FileHash WireFox.exe</code>. WireFox is also 100% open source, so you can inspect the code and compile it yourself with <code style="color:var(--brand-orange)">dotnet publish</code>.
+            </div>
+          </div>
+
+          <!-- FAQ 6 -->
+          <div class="faq-item">
+            <button class="faq-question">
+              <span>How do I uninstall WireFox cleanly?</span>
+              <svg class="faq-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"></polyline></svg>
+            </button>
+            <div class="faq-answer">
+              You can click the &ldquo;Uninstall WireFox&rdquo; button inside <strong>Settings &gt; About</strong>, or run the uninstaller (<code style="color:var(--brand-frost)">uninstall.ps1</code>). This cleanly removes the scheduled boot tasks, shortcut entries, and Program Files directory.
+            </div>
+          </div>
+
+          <!-- FAQ 6: Early Access & Disclaimers -->
+          <div class="faq-item">
+            <button class="faq-question">
+              <span>What are the terms and disclaimers for using WireFox?</span>
+              <svg class="faq-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"></polyline></svg>
+            </button>
+            <div class="faq-answer">
+              WireFox is independent, free, early-access community software licensed under the <a href="https://github.com/TalviFox/WireFox/blob/main/LICENSE" target="_blank" rel="noopener noreferrer" style="color:var(--brand-frost); text-decoration:underline;">PolyForm Perimeter License 1.0.0</a>. It is provided strictly on an <strong>"AS IS" and "AS AVAILABLE" basis, without warranties of any kind</strong>, express or implied. While engineered for reliability and tested across Windows 10 and 11, networking conditions, captive portals, and adapter driver states vary. Users are solely responsible for verifying their own connection security and local network requirements.
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Call to Action Banner -->
+    <div class="container">
+      <div class="cta-banner">
+        <h2>Never Forget to Connect Again</h2>
+        <p>Turn WireGuard into an effortless, zero-maintenance background shield across every Wi-Fi and Ethernet network you encounter.</p>
+        <div class="hero-btn-row">
+          <a href="https://github.com/TalviFox/WireFox/releases/latest" class="btn-primary" id="footer-cta-download">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+            <span>Download WireFox Free</span>
+          </a>
+          <a href="https://github.com/TalviFox/WireFox" target="_blank" rel="noopener noreferrer" class="btn-secondary" id="footer-cta-github">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
+            <span>Star on GitHub</span>
+          </a>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- Site Footer -->
+  <footer class="site-footer">
+    <div class="container">
+      <div class="footer-top">
+        <div class="footer-brand">
+          <img src="assets/wirefox_icon.png" alt="WireFox Logo" style="width:28px; height:28px;">
+          <span class="brand-text">Wire<span>Fox</span></span>
+        </div>
+        <ul class="footer-links">
+          <li><a href="#features" class="footer-link">Features</a></li>
+          <li><a href="#showcase" class="footer-link">Screenshots</a></li>
+          <li><a href="#install" class="footer-link">Installation</a></li>
+          <li><a href="https://github.com/TalviFox/WireFox/blob/main/LICENSE" target="_blank" rel="noopener noreferrer" class="footer-link">License</a></li>
+          <li><a href="https://github.com/TalviFox/WireFox/releases" target="_blank" rel="noopener noreferrer" class="footer-link">Releases</a></li>
+          <li><a href="https://github.com/TalviFox/WireFox" target="_blank" rel="noopener noreferrer" class="footer-link">GitHub</a></li>
+        </ul>
+      </div>
+
+      <div class="footer-bottom">
+        <div>
+          Copyright &copy; 2026 FoxDen Software. Source-available under PolyForm Perimeter License 1.0.0.
+          <div class="footer-disclaimer">
+            <strong>Early Access &amp; Security Disclaimer:</strong> WireFox is independent, early-access software provided on an "as is" and "as available" basis without warranties of any kind, express or implied. While WireFox is designed to automate and manage WireGuard tunnels, network conditions and local adapter behaviors vary. Users are solely responsible for ensuring their network environment and data security requirements are satisfied.
+          </div>
+          <div class="footer-disclaimer">
+            <a href="https://www.wireguard.com" target="_blank" rel="noopener noreferrer" style="color:var(--brand-frost-light); text-decoration:underline;">WireGuard&reg;</a> is a registered trademark of Jason A. Donenfeld. WireFox is an independent companion project and is not affiliated with, endorsed by, or sponsored by Jason A. Donenfeld or the WireGuard development team.
+          </div>
+        </div>
+        <div>
+          <a href="#" style="color:var(--brand-frost-light); font-weight:600;">Back to top &uarr;</a>
+        </div>
+      </div>
+    </div>
+  </footer>
+
+  <script src="js/main.js"></script>
+</body>
+</html>
