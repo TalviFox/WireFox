@@ -96,30 +96,29 @@ irm https://raw.githubusercontent.com/TalviFox/WireFox/main/uninstall.ps1 | iex
 
 ## 📝 Changelog
 
-### v1.0.5
+### [v1.0.6](https://github.com/TalviFox/WireFox/releases/tag/v1.0.6)
+- **Graceful SCM Tunnel Teardowns:** Extended SCM stop timeout to 8s with `StopPending` state handling, allowing Windows NDIS and Wintun driver to unbind cleanly without false timeouts.
+- **Service Deletion Guard:** Eliminated premature `sc.exe delete` calls on healthy stops, preventing Win32 Error 1072 (`ERROR_SERVICE_MARKED_FOR_DELETE`) and enabling instant (<1s) starts via existing service reuse.
+- **Trusted Settle Optimization:** Guarded `OnNetworkSettled` to prevent redundant teardowns, `taskkill` calls, and DNS cache flushing while sitting on trusted networks.
+- **Stale Tunnel Outage/Sleep Recovery:** Automatically detects and gracefully refreshes tunnels with stale handshakes when reconnecting after extended network outages or sleep.
+- **Non-Destructive Watchdog Recovery:** Refactored `ForceRestartTunnelAsync()` to attempt a gentle restart first before escalating to full reset.
+- **Strict WireGuard Scope Enforcement:** Enforced strict WireGuard naming specification and Windows NT service backing during discovery, eliminating phantom tunnel detections from NDIS filter miniports, packet capture bindings (Npcap/WinPcap), and virtual bridges.
+- **UI & UX Polish:** Added text wrapping and hover tooltips for long tunnel names, toast feedback for manual diagnostic scans, bold category labels on the Status page, and side-scrolling for log console entries.
+
+### [v1.0.5](https://github.com/TalviFox/WireFox/releases/tag/v1.0.5)
 - **Fix:** Replaced native `wireguard.exe` tunnel uninstallation with silent `sc.exe delete` to eliminate "Service does not exist" Error UI popups when disconnecting/trusting networks.
 - **Fix:** Overhauled gateway storage logic to uniquely identify trusted networks by IP + MAC Address, resolving a major bug where multiple networks sharing the same default gateway (e.g. 192.168.1.1) would overwrite each other and trigger false-positive anti-spoofing lockouts.
 
-
-### v1.0.4
+### [v1.0.4](https://github.com/TalviFox/WireFox/releases/tag/v1.0.4)
 - **Resilient Tunnel Deactivation & Zombie Prevention:** Resolved the WireGuard deactivation freeze where driver deadlocks left services spinning in `StopPending` state. Added graceful stop timeout (3s) with immediate escalation to hosting process termination, SCM driver unbinding, and active DNS cache resolver flushing (`DnsFlushResolverCache`) to prevent Windows Filtering Platform (WFP) kernel blackholes.
 - **Interactive Tray Control:** Added direct **Kill WireGuard (Force Stop)** action item to the system tray.
 - **Differential Watchdog Diagnostics:** Integrated Layer-2 default gateway ARP probing (`ArpService`) and ICMP verification to validate physical network reachability before attributing connection loss to WireGuard, eliminating false-positive restarts when physical connectivity is lost.
 - **Active End-to-End Connectivity Probing:** Handshake watchdog actively tests HTTP 204 endpoints (`generate_204`) with fallback DNS resolution checks against `msftconnecttest.com` to detect silent UDP drops and dead routes.
 - **Intelligent Toast Notification Debouncing:** Replaced rapid notification spam during network transitions with in-place Windows toast replacements (tagged `wirefox` group) and strict cooldown timers (10m for network discovery, 3m for watchdog alerts).
-- **Encoding & Script Hardening:** Fixed a lot of the PowerShell emoji mojibake across `install.ps1`, `uninstall.ps1`, `verify.ps1`, and `release.ps1` by moving to runtime surrogate generation, XML entity escaping, and enforcing UTF-8 without BOM across all build pipelines.
+- **Encoding & Script Hardening:** Fixed PowerShell emoji mojibake across `install.ps1`, `uninstall.ps1`, `verify.ps1`, and `release.ps1` by moving to runtime surrogate generation, XML entity escaping, and enforcing UTF-8 without BOM across all build pipelines.
 - **Re-tooled Installer Logic:** Updated install options and double click behavior as well as script theming.
 
-### v1.0.3
-- **Security Hardening & Least-Privilege Guardrails:**
-  - **Fail-Closed In-Place Updates:** Enforced strict cryptographic SHA-256 integrity verification before executing updates, blocking untrusted or unverified binaries.
-  - **Hardened Update Staging:** In-place updates now stage exclusively inside protected `Program Files\WireFox\Updates` instead of user-writable `%TEMP%` to eliminate local privilege escalation risks.
-  - **Safe Interface Discovery:** Tunnel `.conf` discovery now enforces strict interface name validation and structural checks to prevent arbitrary file reading.
-  - **Portable Mode Guardrails:** Running portably outside `Program Files` now alerts the user, blocks registering elevated scheduled tasks from untrusted directories, and provides a 1-click install to `Program Files`.
-  - **Installed Apps Version Sync:** Automatically synchronizes the registered Windows DisplayVersion upon launch to eliminate version drift in Windows Settings.
-
-### v1.0.2
-- **Fixed Zombie Tunnels:** Fixed an issue where a tunnel could be left indefinitely active if the underlying Windows service wasn't properly registered with the Service Control Manager. Now gracefully falls back to explicit interface uninstallation.
+> For older releases, see [GitHub Releases](https://github.com/TalviFox/WireFox/releases).
 
 ---
 
@@ -137,19 +136,6 @@ dotnet publish WireFox.csproj -c Release -r win-x64 --self-contained true -p:Pub
 ```
 
 Or run `build.bat` in the root directory.
-
----
-
-## 📝 Changelog
-
-### v1.0.6
-- **Graceful SCM Tunnel Teardowns:** Extended SCM stop timeout to 8s with `StopPending` state handling, allowing Windows NDIS and Wintun driver to unbind cleanly.
-- **Service Deletion Guard:** Eliminated premature `sc.exe delete` calls on healthy stops, preventing Win32 Error 1072 (`ERROR_SERVICE_MARKED_FOR_DELETE`) and ensuring instant (<1s) starts via existing service reuse.
-- **Trusted Settle Optimization:** Guarded `OnNetworkSettled` to prevent redundant teardowns, `taskkill` calls, and DNS cache flushing while sitting on trusted networks.
-- **Stale Tunnel Outage/Sleep Recovery:** Automatically detects and gracefully refreshes tunnels with stale handshakes when reconnecting after extended network outages or sleep.
-- **Non-Destructive Watchdog Recovery:** Refactored `ForceRestartTunnelAsync()` to attempt a gentle restart first before escalating to full reset.
-- **Strict WireGuard Scope Enforcement:** Enforced strict WireGuard naming specification and Windows NT service backing during discovery, eliminating phantom tunnel detections from NDIS filter miniports, packet capture bindings (Npcap/WinPcap), and virtual bridges.
-- **UI & UX Polish:** Added text wrapping and hover tooltips for long tunnel names, toast feedback for manual diagnostic scans, bold category labels on the Status page, and side-scrolling for log console entries.
 
 ---
 
