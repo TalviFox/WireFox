@@ -39,7 +39,7 @@
   <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 
   <!-- Stylesheet -->
-  <link rel="stylesheet" href="css/style.css?v=1.4">
+  <link rel="stylesheet" href="css/style.css?v=1.6">
 
   <!-- Schema.org JSON-LD for Search Engines -->
   <script type="application/ld+json">
@@ -53,7 +53,7 @@
     "license": "https://github.com/TalviFox/WireFox/blob/main/LICENSE",
     "url": "https://wirefox.foxdensoftware.dev/",
     "downloadUrl": "https://github.com/TalviFox/WireFox/releases",
-    "softwareVersion": "1.0.5",
+    "softwareVersion": "1.0.6",
     "author": {
       "@type": "Organization",
       "name": "FoxDen Software",
@@ -73,13 +73,12 @@
   <aside class="mobile-notice-banner" id="mobile-notice" aria-label="Desktop application notice" style="display: none;">
     <div class="container mobile-notice-inner">
       <div class="mobile-notice-content">
-        <span class="mobile-notice-badge">Windows 10 &amp; 11 Utility</span>
         <p class="mobile-notice-message">
           <strong>Visiting from mobile?</strong> WireFox is built exclusively for Windows desktop PCs. You are welcome to grab the download or copy the link to open on your PC. Feel free to explore all features, architecture, and diagnostics below!
         </p>
       </div>
       <div class="mobile-notice-actions">
-        <a href="https://github.com/TalviFox/WireFox/releases/latest" class="btn-mobile-action btn-mobile-dl" id="mobile-download-btn" title="Download WireFox executable">
+        <a href="https://github.com/TalviFox/WireFox/releases/tag/v1.0.6" class="btn-mobile-action btn-mobile-dl" id="mobile-download-btn" title="Download WireFox executable">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
           <span>Download</span>
         </a>
@@ -116,7 +115,7 @@
           </svg>
           <span>GitHub</span>
         </a>
-        <a href="https://github.com/TalviFox/WireFox/releases/latest" class="btn-nav-download" id="nav-download-btn">
+        <a href="https://github.com/TalviFox/WireFox/releases/tag/v1.0.6" class="btn-nav-download" id="nav-download-btn">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
             <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
             <polyline points="7 10 12 15 17 10"></polyline>
@@ -149,13 +148,13 @@
 
         <div class="hero-actions">
           <div class="hero-btn-row">
-            <a href="https://github.com/TalviFox/WireFox/releases/latest" class="btn-primary" id="hero-download-btn">
+            <a href="https://github.com/TalviFox/WireFox/releases/tag/v1.0.6" class="btn-primary" id="hero-download-btn">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                 <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
                 <polyline points="7 10 12 15 17 10"></polyline>
                 <line x1="12" y1="15" x2="12" y2="3"></line>
               </svg>
-              <span>Download WireFox <span class="release-version-tag">v1.0.5</span></span>
+              <span>Download WireFox <span class="release-version-tag">v1.0.6</span></span>
             </a>
             <a href="#showcase" class="btn-secondary" id="hero-explore-btn">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -269,7 +268,7 @@
               <div class="caption-title" id="caption-title">Status & Live Controls</div>
               <div class="caption-desc" id="caption-desc">Real-time tunnel state, active network details, and instant 15-minute pause controls.</div>
             </div>
-            <a href="https://github.com/TalviFox/WireFox/releases/latest" class="btn-primary" style="padding: 8px 18px; font-size: 0.9rem;">
+            <a href="https://github.com/TalviFox/WireFox/releases/tag/v1.0.6" class="btn-primary" style="padding: 8px 18px; font-size: 0.9rem;">
               Download WireFox
             </a>
           </div>
@@ -454,10 +453,34 @@
         </div>
 
         <div class="install-tabs-nav">
-          <button class="install-tab-btn active" data-pane="pane-ps" id="install-tab-ps">⚡ One-Line PowerShell</button>
-          <button class="install-tab-btn" data-pane="pane-manual" id="install-tab-manual">📦 Manual Download</button>
-          <button class="install-tab-btn" data-pane="pane-winget" id="install-tab-winget">🪟 WinGet <small style="opacity:0.6; font-size:0.75em; font-weight:normal;">(Coming Soon)</small></button>
-          <button class="install-tab-btn" data-pane="pane-verify" id="install-tab-verify">🔒 Verify Integrity</button>
+          <button class="install-tab-btn active" data-pane="pane-ps" id="install-tab-ps">
+            <svg class="install-tab-icon" width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+              <path d="M21.144 2.5a2.857 2.857 0 0 0-2.858 2.857v13.286a2.857 2.857 0 0 0 2.858 2.857H24V2.5h-2.856zM0 6.643v10.714C0 19.014 1.486 20.5 3.321 20.5h13.93c1.834 0 3.32-1.486 3.32-3.143V6.643C20.571 4.986 19.086 3.5 17.25 3.5H3.321C1.486 3.5 0 4.986 0 6.643zm8.384 8.795l-4.227-2.735a.857.857 0 0 1-.22-.249.856.856 0 0 1 .684-1.328h.001c.21 0 .416.074.577.209l3.666 2.373 5.485-6.02a.858.858 0 0 1 1.206-.062.857.857 0 0 1 .063 1.207l-6.143 6.744a.857.857 0 0 1-1.092.146v-.285zm7.388 1.833h-4.286a.857.857 0 0 1 0-1.714h4.286a.857.857 0 0 1 0 1.714z"/>
+            </svg>
+            <span>One-Line PowerShell</span>
+          </button>
+          <button class="install-tab-btn" data-pane="pane-manual" id="install-tab-manual">
+            <svg class="install-tab-icon" width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+              <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/>
+            </svg>
+            <span>Manual Download</span>
+          </button>
+          <button class="install-tab-btn" data-pane="pane-winget" id="install-tab-winget">
+            <svg class="install-tab-icon" width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+              <rect x="2" y="2" width="9.2" height="9.2" rx="1.2"/>
+              <rect x="12.8" y="2" width="9.2" height="9.2" rx="1.2"/>
+              <rect x="2" y="12.8" width="9.2" height="9.2" rx="1.2"/>
+              <rect x="12.8" y="12.8" width="9.2" height="9.2" rx="1.2"/>
+            </svg>
+            <span>WinGet <small class="tab-badge-soon">(Coming Soon)</small></span>
+          </button>
+          <button class="install-tab-btn" data-pane="pane-verify" id="install-tab-verify">
+            <svg class="install-tab-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+              <polyline points="9 12 11 14 15 10"></polyline>
+            </svg>
+            <span>Verify Integrity</span>
+          </button>
         </div>
 
         <!-- Pane 0: WinGet -->
@@ -477,7 +500,7 @@
                   </button>
                 </div>
                 <p style="font-size:0.82rem; opacity:0.6; margin-top:0.6rem; margin-bottom:0;">
-                  In the meantime, please use the <strong>⚡ One-Line PowerShell</strong> or <strong>📦 Manual Download</strong> tab above.
+                  In the meantime, please use the <strong>One-Line PowerShell</strong> or <strong>Manual Download</strong> tab above.
                 </p>
               </div>
             </div>
@@ -527,7 +550,7 @@
               <div class="step-content">
                 <h4>Download the Executable</h4>
                 <p>Grab the latest standalone <code style="color:var(--brand-orange)">WireFox.exe</code> directly from our GitHub Releases:</p>
-                <a href="https://github.com/TalviFox/WireFox/releases/latest" class="btn-primary" style="margin: 8px 0 16px;">
+                <a href="https://github.com/TalviFox/WireFox/releases/tag/v1.0.6" class="btn-primary" style="margin: 8px 0 16px;">
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
                   <span>Go to Latest GitHub Release</span>
                 </a>
@@ -682,7 +705,7 @@
         <h2>Never Forget to Connect Again</h2>
         <p>Turn WireGuard into an effortless, zero-maintenance background shield across every Wi-Fi and Ethernet network you encounter.</p>
         <div class="hero-btn-row">
-          <a href="https://github.com/TalviFox/WireFox/releases/latest" class="btn-primary" id="footer-cta-download">
+          <a href="https://github.com/TalviFox/WireFox/releases/tag/v1.0.6" class="btn-primary" id="footer-cta-download">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
             <span>Download WireFox Free</span>
           </a>

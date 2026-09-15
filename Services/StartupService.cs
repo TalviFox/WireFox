@@ -2,6 +2,8 @@ using System;
 using System.Diagnostics;
 using System.IO;
 using System.Security.Principal;
+using System.Threading;
+using System.Windows;
 using Microsoft.Win32;
 using Microsoft.Win32.TaskScheduler;
 
@@ -269,9 +271,9 @@ namespace WireFox.Services
         }
 
         /// <summary>
-        /// Seamlessly installs the running portable executable into Program Files\WireFox,
+        /// Seamlessly installs or updates the running portable executable into Program Files\WireFox,
         /// creates the Start Menu shortcut, registers Windows Installed Apps entry,
-        /// and launches the installed application.
+        /// and launches the installed application directly via native BCL without external scripts.
         /// </summary>
         public static bool InstallToProgramFiles()
         {
@@ -290,105 +292,134 @@ namespace WireFox.Services
                 string version = UpdateService.Instance.GetCurrentVersionString();
                 string sourceDir = Path.GetDirectoryName(currentExe) ?? "";
 
-                // Staging directory for the elevated helper script
-                string tempDir = Path.Combine(Path.GetTempPath(), "WireFox_Installer");
-                Directory.CreateDirectory(tempDir);
-                string installScript = Path.Combine(tempDir, "install_to_program_files.ps1");
-
-                string scriptContent = $@"
-# WireFox Elevated Program Files Installer
-Add-Type -AssemblyName System.Windows.Forms
-Start-Sleep -Milliseconds 300
-
-# Stop any running WireFox instances except ourselves
-Get-Process -Name 'WireFox' -ErrorAction SilentlyContinue | Where-Object {{ $_.Id -ne $PID }} | Stop-Process -Force
-Start-Sleep -Milliseconds 500
-
-$targetDir = '{targetDir.Replace("'", "''")}'
-$targetExe = '{targetExe.Replace("'", "''")}'
-$currentExe = '{currentExe.Replace("'", "''")}'
-$sourceDir = '{sourceDir.Replace("'", "''")}'
-
-if (-not (Test-Path $targetDir)) {{
-    New-Item -ItemType Directory -Path $targetDir -Force | Out-Null
-}}
-
-$maxRetries = 10
-$retry = 0
-$copied = $false
-while (-not $copied -and $retry -lt $maxRetries) {{
-    try {{
-        Copy-Item -Path $currentExe -Destination $targetExe -Force -ErrorAction Stop
-        $copied = $true
-    }} catch {{
-        $retry++
-        Start-Sleep -Milliseconds 500
-    }}
-}}
-
-if (-not $copied) {{
-    [System.Windows.Forms.MessageBox]::Show('Failed to copy WireFox to Program Files. The file may be in use.', 'WireFox Installation Error', [System.Windows.Forms.MessageBoxButtons]::OK, [System.Windows.Forms.MessageBoxIcon]::Error)
-    exit 1
-}}
-
-# Copy companion scripts if available
-$searchDirs = @($sourceDir, (Split-Path -Parent $sourceDir))
-foreach ($f in @('uninstall.ps1', 'verify.ps1', 'wirefox.ico')) {{
-    foreach ($d in $searchDirs) {{
-        $src = Join-Path $d $f
-        if (Test-Path $src) {{
-            Copy-Item -Path $src -Destination (Join-Path $targetDir $f) -Force -ErrorAction SilentlyContinue
-            break
-        }}
-    }}
-}}
-
-# Register in Windows Installed Apps
-try {{
-    $regKey = 'HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\WireFox'
-    if (-not (Test-Path $regKey)) {{ New-Item -Path $regKey -Force | Out-Null }}
-    Set-ItemProperty -Path $regKey -Name 'DisplayName' -Value 'WireFox'
-    Set-ItemProperty -Path $regKey -Name 'DisplayVersion' -Value '{version.Replace("'", "''")}'
-    Set-ItemProperty -Path $regKey -Name 'Publisher' -Value 'FoxDen Software'
-    Set-ItemProperty -Path $regKey -Name 'DisplayIcon' -Value ""$targetExe,0""
-    Set-ItemProperty -Path $regKey -Name 'InstallLocation' -Value $targetDir
-    Set-ItemProperty -Path $regKey -Name 'UninstallString' -Value ""powershell.exe -NoProfile -ExecutionPolicy Bypass -File `""$uninstallerTarget`""""
-    Set-ItemProperty -Path $regKey -Name 'URLInfoAbout' -Value 'https://github.com/TalviFox/WireFox'
-}} catch {{}}
-
-# Create Start Menu Shortcut
-try {{
-    $wsh = New-Object -ComObject WScript.Shell
-    $shortcutPath = Join-Path ([Environment]::GetFolderPath('CommonPrograms')) 'WireFox.lnk'
-    $shortcut = $wsh.CreateShortcut($shortcutPath)
-    $shortcut.TargetPath = $targetExe
-    $shortcut.WorkingDirectory = $targetDir
-    $shortcut.IconLocation = ""$targetExe,0""
-    $shortcut.Description = 'Automated Roaming & Watchdog Manager for WireGuard on Windows'
-    $shortcut.Save()
-}} catch {{}}
-
-# Inform user and launch newly installed instance
-[System.Windows.Forms.MessageBox]::Show('WireFox has been successfully installed to Program Files!', 'WireFox Setup', [System.Windows.Forms.MessageBoxButtons]::OK, [System.Windows.Forms.MessageBoxIcon]::Information)
-Start-Process -FilePath $targetExe
-";
-                File.WriteAllText(installScript, scriptContent);
-
-                var psi = new ProcessStartInfo
+                // 1. Terminate any other running WireFox instances (e.g. background tray instance)
+                int currentPid = Environment.ProcessId;
+                foreach (var proc in System.Diagnostics.Process.GetProcessesByName("WireFox"))
                 {
-                    FileName = "powershell.exe",
-                    Arguments = $"-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File \"{installScript}\"",
-                    UseShellExecute = true,
-                    Verb = "runas"
-                };
+                    if (proc.Id != currentPid)
+                    {
+                        try
+                        {
+                            proc.Kill();
+                            proc.WaitForExit(3000);
+                        }
+                        catch { }
+                    }
+                }
 
-                Process.Start(psi);
-                LoggingService.Instance.Info("Install", "Launched elevated installer script.");
+                // 2. Ensure target directory exists
+                if (!Directory.Exists(targetDir))
+                {
+                    Directory.CreateDirectory(targetDir);
+                }
+
+                // 3. Copy executable with retries in case OS file handle release takes a moment
+                bool copied = false;
+                for (int retry = 0; retry < 10; retry++)
+                {
+                    try
+                    {
+                        File.Copy(currentExe, targetExe, overwrite: true);
+                        copied = true;
+                        break;
+                    }
+                    catch (IOException)
+                    {
+                        Thread.Sleep(300);
+                    }
+                }
+
+                if (!copied)
+                {
+                    System.Windows.MessageBox.Show(
+                        "Failed to copy WireFox to Program Files. The target file may still be in use by Windows.\n\nPlease close any background processes and try again.",
+                        "WireFox Update Error", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
+                    return false;
+                }
+
+                // 4. Copy companion scripts if available alongside the source
+                string[] searchDirs = new[] { sourceDir, Directory.GetParent(sourceDir)?.FullName ?? "" };
+                foreach (var f in new[] { "uninstall.ps1", "verify.ps1", "wirefox.ico" })
+                {
+                    foreach (var d in searchDirs)
+                    {
+                        if (string.IsNullOrEmpty(d)) continue;
+                        string src = Path.Combine(d, f);
+                        if (File.Exists(src))
+                        {
+                            try
+                            {
+                                File.Copy(src, Path.Combine(targetDir, f), overwrite: true);
+                            }
+                            catch { }
+                            break;
+                        }
+                    }
+                }
+
+                // 5. Register in Windows Installed Apps (HKLM)
+                try
+                {
+                    using var regKey = Registry.LocalMachine.CreateSubKey(@"Software\Microsoft\Windows\CurrentVersion\Uninstall\WireFox");
+                    if (regKey != null)
+                    {
+                        regKey.SetValue("DisplayName", "WireFox");
+                        regKey.SetValue("DisplayVersion", version);
+                        regKey.SetValue("Publisher", "FoxDen Software");
+                        regKey.SetValue("DisplayIcon", $"{targetExe},0");
+                        regKey.SetValue("InstallLocation", targetDir);
+                        regKey.SetValue("UninstallString", $"powershell.exe -NoProfile -ExecutionPolicy Bypass -File \"{uninstallerTarget}\"");
+                        regKey.SetValue("URLInfoAbout", "https://github.com/TalviFox/WireFox");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    LoggingService.Instance.Warning("Install", $"Registry registration warning: {ex.Message}");
+                }
+
+                // 6. Create / Update Start Menu Shortcut
+                try
+                {
+                    Type? shellType = Type.GetTypeFromProgID("WScript.Shell");
+                    if (shellType != null)
+                    {
+                        dynamic? shell = Activator.CreateInstance(shellType);
+                        if (shell != null)
+                        {
+                            string shortcutPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonPrograms), "WireFox.lnk");
+                            dynamic shortcut = shell.CreateShortcut(shortcutPath);
+                            shortcut.TargetPath = targetExe;
+                            shortcut.WorkingDirectory = targetDir;
+                            shortcut.IconLocation = $"{targetExe},0";
+                            shortcut.Description = "Automated Roaming & Watchdog Manager for WireGuard on Windows";
+                            shortcut.Save();
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    LoggingService.Instance.Warning("Install", $"Start menu shortcut warning: {ex.Message}");
+                }
+
+                // 7. Inform user of success
+                System.Windows.MessageBox.Show(
+                    "WireFox has been successfully installed/updated in Program Files!\n\nLaunching the updated version now...",
+                    "WireFox Setup", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Information);
+
+                // 8. Launch the newly installed executable
+                Process.Start(new ProcessStartInfo
+                {
+                    FileName = targetExe,
+                    UseShellExecute = true
+                });
+
+                LoggingService.Instance.Success("Install", $"Successfully updated Program Files installation to version {version} and spawned new instance.");
                 return true;
             }
             catch (Exception ex)
             {
                 LoggingService.Instance.Error("Install", "InstallToProgramFiles failed", ex);
+                System.Windows.MessageBox.Show($"Installation failed: {ex.Message}", "WireFox Setup Error", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
                 return false;
             }
         }

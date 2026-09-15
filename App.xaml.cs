@@ -10,7 +10,9 @@ namespace WireFox
     public partial class App : System.Windows.Application
     {
         private static Mutex? _mutex;
+        private static EventWaitHandle? _showWindowEvent;
         private const string AppMutexName = "Global\\WireFox_SingleInstance_Mutex";
+        private const string AppShowEventName = "Global\\WireFox_ShowInstance_Event";
 
         protected override void OnStartup(StartupEventArgs e)
         {
@@ -22,57 +24,56 @@ namespace WireFox
             if (!isNewInstance)
             {
                 // Another instance is already running
-                if (!isRunningFromProgramFiles)
+                if (!isRunningFromProgramFiles && isInstalled)
                 {
-                    // Running outside Program Files while an instance is running
-                    string text = isInstalled
-                        ? "An active instance of WireFox is running from Program Files.\n\nWould you like to close the running instance to update your Program Files installation with this version?"
-                        : "An active instance of WireFox is already running on this system.\n\nWould you like to close the running instance to install this version to Program Files?";
-
                     var choice = System.Windows.MessageBox.Show(
-                        text + "\n\n• Click 'Yes' to close the running instance and update/install.\n• Click 'No' to keep the background instance running and exit.",
-                        "WireFox", MessageBoxButton.YesNo, MessageBoxImage.Warning);
+                        "An active instance of WireFox is running from Program Files.\n\nWould you like to close the running instance to update your Program Files installation with this version?\n\n• Click 'Yes' to update Program Files.\n• Click 'No' to bring the running WireFox window to the front.",
+                        "WireFox", MessageBoxButton.YesNo, MessageBoxImage.Question);
 
                     if (choice == MessageBoxResult.Yes)
                     {
-                        StartupService.InstallToProgramFiles();
-                    }
-                }
-                else
-                {
-                    // Running from inside Program Files while an instance is already running
-                    var choice = System.Windows.MessageBox.Show(
-                        "WireFox is actively monitoring and protecting your WireGuard tunnels in the background.\n\nWould you like to restart the background instance?\n\n• Click 'Yes' to restart WireFox.\n• Click 'No' to keep it running and close this prompt.",
-                        "WireFox - Already Running", MessageBoxButton.YesNo, MessageBoxImage.Information);
-
-                    if (choice == MessageBoxResult.Yes)
-                    {
-                        try
+                        if (StartupService.InstallToProgramFiles())
                         {
-                            int currentPid = Environment.ProcessId;
-                            foreach (var proc in System.Diagnostics.Process.GetProcessesByName("WireFox"))
-                            {
-                                if (proc.Id != currentPid)
-                                {
-                                    proc.Kill();
-                                    proc.WaitForExit(3000);
-                                }
-                            }
+                            _mutex?.Dispose();
+                            _mutex = null;
+                            Environment.Exit(0);
+                            return;
                         }
-                        catch { }
-
-                        _mutex?.Dispose();
-                        _mutex = new Mutex(true, AppMutexName, out _);
-                        // Continue startup
-                        goto ContinueStartup;
                     }
                 }
+
+                // Signal the primary running instance to immediately restore its window
+                try
+                {
+                    if (EventWaitHandle.TryOpenExisting(AppShowEventName, out var signalHandle))
+                    {
+                        signalHandle.Set();
+                        signalHandle.Dispose();
+                    }
+                }
+                catch { }
 
                 Shutdown();
                 return;
             }
 
-        ContinueStartup:
+            // Register background listener to restore window when secondary instances launch
+            try
+            {
+                _showWindowEvent = new EventWaitHandle(false, EventResetMode.AutoReset, AppShowEventName);
+                ThreadPool.RegisterWaitForSingleObject(_showWindowEvent, (state, timedOut) =>
+                {
+                    Dispatcher.InvokeAsync(() =>
+                    {
+                        if (MainWindow is Views.MainWindow mw)
+                        {
+                            mw.ShowAndRestore();
+                        }
+                    });
+                }, null, -1, false);
+            }
+            catch { }
+
             // Global exception logging
             DispatcherUnhandledException += OnDispatcherUnhandledException;
             AppDomain.CurrentDomain.UnhandledException += OnDomainUnhandledException;
@@ -96,7 +97,9 @@ namespace WireFox
                     {
                         if (StartupService.InstallToProgramFiles())
                         {
-                            Shutdown();
+                            _mutex?.Dispose();
+                            _mutex = null;
+                            Environment.Exit(0);
                             return;
                         }
                     }
@@ -120,7 +123,9 @@ namespace WireFox
                         {
                             if (StartupService.InstallToProgramFiles())
                             {
-                                Shutdown();
+                                _mutex?.Dispose();
+                                _mutex = null;
+                                Environment.Exit(0);
                                 return;
                             }
                         }
@@ -209,6 +214,7 @@ namespace WireFox
         protected override void OnExit(ExitEventArgs e)
         {
             WatchdogService.Instance.Stop();
+            _showWindowEvent?.Dispose();
             _mutex?.ReleaseMutex();
             _mutex?.Dispose();
             base.OnExit(e);

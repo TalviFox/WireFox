@@ -111,8 +111,24 @@ namespace WireFox.Services
             if (state.IsTrusted)
             {
                 _sessionExpiresUtc = null;
-                LoggingService.Instance.Info("WatchdogService", "Trusted network active: stopping all VPN tunnels");
-                await cli.StopAllTunnelsAsync();
+
+                // Guard: If already bypassed and no tunnel is active, avoid teardown churn
+                if (_status == TunnelStatus.Bypassed && !isRunning)
+                {
+                    LoggingService.Instance.Debug("WatchdogService", "Network settled on trusted network: tunnel already bypassed and inactive.");
+                    return;
+                }
+
+                // If no tunnel is running, transition status directly without executing process teardowns
+                if (!isRunning)
+                {
+                    LoggingService.Instance.Info("WatchdogService", "Trusted network active: no tunnels running, setting status to Bypassed.");
+                    SetStatus(TunnelStatus.Bypassed);
+                    return;
+                }
+
+                LoggingService.Instance.Info("WatchdogService", $"Trusted network active: stopping active tunnel '{targetInterface}' gracefully...");
+                await cli.StopTunnelAsync(targetInterface);
                 SetStatus(TunnelStatus.Bypassed);
                 return;
             }
@@ -159,6 +175,21 @@ namespace WireFox.Services
                 if (!started)
                 {
                     LoggingService.Instance.Warning("WatchdogService", $"Automatic tunnel start failed for '{targetInterface}'");
+                }
+            }
+            else
+            {
+                // If tunnel service is running but handshake is stale after wake/reconnect, refresh it gracefully
+                var latestHandshake = await cli.GetLatestHandshakeUtcAsync(targetInterface);
+                if (latestHandshake.HasValue && (DateTime.UtcNow - latestHandshake.Value).TotalSeconds > profile.HandshakeTimeoutSeconds)
+                {
+                    LoggingService.Instance.Warning("WatchdogService", 
+                        $"Network settled on untrusted network but running tunnel '{targetInterface}' has stale handshake. Refreshing tunnel connection...");
+                    await cli.StopTunnelAsync(targetInterface);
+                    _tunnelStartedUtc = DateTime.UtcNow;
+                    _consecutiveFailures = 0;
+                    _blockedWarningSent = false;
+                    await cli.StartTunnelAsync(targetInterface, profile.WireGuardConfigPath);
                 }
             }
 
@@ -313,23 +344,6 @@ namespace WireFox.Services
             {
                 return;
             }
-
-            // 1. Proactively detect if any WireGuard tunnel service is stuck in StopPending
-            try
-            {
-                var services = ServiceController.GetServices();
-                var stuckServices = services.Where(s => 
-                    s.ServiceName.StartsWith("WireGuardTunnel$", StringComparison.OrdinalIgnoreCase) && 
-                    s.Status == ServiceControllerStatus.StopPending).ToList();
-
-                foreach (var stuck in stuckServices)
-                {
-                    LoggingService.Instance.Warning("WatchdogService", 
-                        $"Found service '{stuck.ServiceName}' stuck in StopPending state. Escalating force-kill...");
-                    cli.ForceKillServiceProcess(stuck.ServiceName);
-                }
-            }
-            catch { }
 
             if (!cli.IsTunnelServiceRunning(targetInterface))
             {
@@ -651,32 +665,41 @@ namespace WireFox.Services
             string targetInterface = GetEffectiveInterfaceName(config);
             var profile = config.GetProfile(targetInterface);
 
-            LoggingService.Instance.Warning("WatchdogService", $"ForceRestartTunnelAsync executing (Full Reset)...");
+            LoggingService.Instance.Warning("WatchdogService", $"Restarting tunnel '{targetInterface}' gracefully...");
             SetStatus(TunnelStatus.Connecting);
 
-            // Wipe out ALL WireGuard hooks globally before restarting the primary tunnel
-            await cli.StopAllTunnelsAsync(true);
-            await Task.Delay(1000);
+            // Attempt graceful restart first; only escalate to nuclear wipeout if graceful stop fails
+            bool stopped = await cli.StopTunnelAsync(targetInterface);
+            if (!stopped)
+            {
+                LoggingService.Instance.Warning("WatchdogService", $"Graceful stop failed for '{targetInterface}'. Escalating to full reset...");
+                await cli.StopAllTunnelsAsync(true);
+                await Task.Delay(1000);
+
+                // Relaunch the WireGuard UI first so the manager is ready
+                if (!string.IsNullOrEmpty(cli.WireGuardExePath))
+                {
+                    try
+                    {
+                        Process.Start(new ProcessStartInfo
+                        {
+                            FileName = cli.WireGuardExePath,
+                            UseShellExecute = true
+                        });
+                        await Task.Delay(1000); // Give the UI a second to initialize
+                    }
+                    catch { }
+                }
+            }
+            else
+            {
+                await Task.Delay(500);
+            }
 
             _tunnelStartedUtc = DateTime.UtcNow;
             _consecutiveFailures = 0;
             _blockedWarningSent = false;
             _restartTimestamps.Add(DateTime.UtcNow);
-
-            // Relaunch the WireGuard UI first so the manager is ready
-            if (!string.IsNullOrEmpty(cli.WireGuardExePath))
-            {
-                try
-                {
-                    Process.Start(new ProcessStartInfo
-                    {
-                        FileName = cli.WireGuardExePath,
-                        UseShellExecute = true
-                    });
-                    await Task.Delay(1000); // Give the UI a second to initialize
-                }
-                catch { }
-            }
 
             await cli.StartTunnelAsync(targetInterface, profile.WireGuardConfigPath);
             await Task.Delay(2000);

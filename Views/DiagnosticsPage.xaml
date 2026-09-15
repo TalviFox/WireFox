@@ -34,7 +34,11 @@
                             <ui:TextBlock Text="WireGuard Subsystem" FontWeight="SemiBold" FontSize="14" />
                         </StackPanel>
                         <ui:TextBlock Text="{Binding WireGuardStatus}" FontSize="12" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
-                        <ui:TextBlock Text="{Binding ActiveTunnelStatus, StringFormat='Active: {0}'}" FontSize="12" FontWeight="SemiBold" Margin="0,4,0,0" Foreground="{DynamicResource SystemAccentColorPrimaryBrush}" />
+                        <ui:TextBlock Text="{Binding ActiveTunnelStatus, StringFormat='Active: {0}'}" 
+                                      FontSize="12" FontWeight="SemiBold" Margin="0,4,0,0" 
+                                      TextWrapping="Wrap" MaxHeight="36"
+                                      ToolTip="{Binding ActiveTunnelStatus}"
+                                      Foreground="{DynamicResource SystemAccentColorPrimaryBrush}" />
                     </StackPanel>
                 </ui:CardControl.Header>
             </ui:CardControl>
@@ -148,8 +152,8 @@
                             <TextBlock Grid.Column="2" Text="{Binding Category}" FontWeight="SemiBold" Foreground="{DynamicResource TextFillColorSecondaryBrush}" VerticalAlignment="Top" Margin="0,0,6,0" TextTrimming="CharacterEllipsis" />
                             
                             <StackPanel Grid.Column="3">
-                                <TextBlock Text="{Binding Message}" TextWrapping="Wrap" Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
-                                <TextBlock Text="{Binding Details}" Visibility="{Binding Details, Converter={x:Null}}" FontSize="11" Foreground="{DynamicResource TextFillColorTertiaryBrush}" TextWrapping="Wrap" Margin="0,2,0,0" />
+                                <TextBlock Text="{Binding Message}" TextWrapping="NoWrap" Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
+                                <TextBlock Text="{Binding Details}" Visibility="{Binding Details, Converter={x:Null}}" FontSize="11" Foreground="{DynamicResource TextFillColorTertiaryBrush}" TextWrapping="NoWrap" Margin="0,2,0,0" />
                             </StackPanel>
                         </Grid>
                     </DataTemplate>

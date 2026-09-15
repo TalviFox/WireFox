@@ -140,6 +140,19 @@ Or run `build.bat` in the root directory.
 
 ---
 
+## 📝 Changelog
+
+### v1.0.6
+- **Graceful SCM Tunnel Teardowns:** Extended SCM stop timeout to 8s with `StopPending` state handling, allowing Windows NDIS and Wintun driver to unbind cleanly.
+- **Service Deletion Guard:** Eliminated premature `sc.exe delete` calls on healthy stops, preventing Win32 Error 1072 (`ERROR_SERVICE_MARKED_FOR_DELETE`) and ensuring instant (<1s) starts via existing service reuse.
+- **Trusted Settle Optimization:** Guarded `OnNetworkSettled` to prevent redundant teardowns, `taskkill` calls, and DNS cache flushing while sitting on trusted networks.
+- **Stale Tunnel Outage/Sleep Recovery:** Automatically detects and gracefully refreshes tunnels with stale handshakes when reconnecting after extended network outages or sleep.
+- **Non-Destructive Watchdog Recovery:** Refactored `ForceRestartTunnelAsync()` to attempt a gentle restart first before escalating to full reset.
+- **Strict WireGuard Scope Enforcement:** Enforced strict WireGuard naming specification and Windows NT service backing during discovery, eliminating phantom tunnel detections from NDIS filter miniports, packet capture bindings (Npcap/WinPcap), and virtual bridges.
+- **UI & UX Polish:** Added text wrapping and hover tooltips for long tunnel names, toast feedback for manual diagnostic scans, bold category labels on the Status page, and side-scrolling for log console entries.
+
+---
+
 ## 🤖 Transparency & AI Disclosure
 
 WireFox is developed with the assistance of AI coding tools. In the spirit of open development and personal accountability: **I don't post what I don't run.**

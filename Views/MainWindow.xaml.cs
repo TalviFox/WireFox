@@ -351,19 +351,30 @@ namespace WireFox.Views
 
         public void ShowAndRestore()
         {
-            ShowInTaskbar = true;
-            if (!IsVisible)
+            Dispatcher.InvokeAsync(() =>
             {
-                Show();
-            }
-            if (WindowState == WindowState.Minimized)
-            {
-                WindowState = WindowState.Normal;
-            }
-            Activate();
-            Topmost = true;
-            Topmost = false;
-            Focus();
+                try
+                {
+                    ShowInTaskbar = true;
+                    if (!IsVisible)
+                    {
+                        Show();
+                    }
+                    Visibility = Visibility.Visible;
+                    if (WindowState == WindowState.Minimized)
+                    {
+                        WindowState = WindowState.Normal;
+                    }
+                    Activate();
+                    Topmost = true;
+                    Topmost = false;
+                    Focus();
+                }
+                catch (Exception ex)
+                {
+                    LoggingService.Instance.Debug("MainWindow", $"ShowAndRestore error: {ex.Message}");
+                }
+            });
         }
 
         public void NavigateToSettings()

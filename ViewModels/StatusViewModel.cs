@@ -51,6 +51,55 @@ namespace WireFox.ViewModels
             set => SetProperty(ref _gatewayInfoText, value);
         }
 
+        private string _gatewayValue = string.Empty;
+        public string GatewayValue
+        {
+            get => _gatewayValue;
+            set => SetProperty(ref _gatewayValue, value);
+        }
+
+        private string _apValue = string.Empty;
+        public string ApValue
+        {
+            get => _apValue;
+            set => SetProperty(ref _apValue, value);
+        }
+
+        private string _dnsLabel = "DNS:";
+        public string DnsLabel
+        {
+            get => _dnsLabel;
+            set => SetProperty(ref _dnsLabel, value);
+        }
+
+        private string _dnsValue = string.Empty;
+        public string DnsValue
+        {
+            get => _dnsValue;
+            set => SetProperty(ref _dnsValue, value);
+        }
+
+        private bool _hasGateway;
+        public bool HasGateway
+        {
+            get => _hasGateway;
+            set => SetProperty(ref _hasGateway, value);
+        }
+
+        private bool _hasAp;
+        public bool HasAp
+        {
+            get => _hasAp;
+            set => SetProperty(ref _hasAp, value);
+        }
+
+        private bool _hasDns;
+        public bool HasDns
+        {
+            get => _hasDns;
+            set => SetProperty(ref _hasDns, value);
+        }
+
         public string HandshakeAgeText
         {
             get => _handshakeAgeText;
@@ -172,7 +221,7 @@ namespace WireFox.ViewModels
 
         private void OnStatusChanged(TunnelStatus status)
         {
-            _dispatcher.Invoke(() => UpdateStatus(status));
+            _dispatcher.InvokeAsync(() => UpdateStatus(status));
         }
 
         private void UpdateStatus(TunnelStatus status)
@@ -192,20 +241,20 @@ namespace WireFox.ViewModels
                     IsSessionActive = false;
                     break;
                 case TunnelStatus.Paused:
-                    StatusText = "Paused";
+                    StatusText = "Paused (15m)";
                     StatusSymbol = SymbolRegular.Pause24;
                     _isTunnelActive = false;
                     IsSessionActive = true;
                     break;
                 case TunnelStatus.SplitTunnel:
                     StatusText = "Split-Tunnel (LAN Only)";
-                    StatusSymbol = SymbolRegular.ArrowSwap24;
-                    _isTunnelActive = true;
+                    StatusSymbol = SymbolRegular.ArrowRouting24;
+                    _isTunnelActive = false;
                     IsSessionActive = true;
                     break;
                 case TunnelStatus.Bypassed:
                     StatusText = "Bypassed (Trusted Network)";
-                    StatusSymbol = SymbolRegular.ShieldDismiss24;
+                    StatusSymbol = SymbolRegular.Checkmark24;
                     _isTunnelActive = false;
                     IsSessionActive = false;
                     break;
@@ -222,7 +271,7 @@ namespace WireFox.ViewModels
 
         private void OnNetworkSettled(NetworkState state)
         {
-            _dispatcher.Invoke(() => UpdateNetwork(state));
+            _dispatcher.InvokeAsync(() => UpdateNetwork(state));
         }
 
         private void UpdateNetwork(NetworkState state)
@@ -252,24 +301,52 @@ namespace WireFox.ViewModels
             var parts = new List<string>();
             if (!string.IsNullOrEmpty(state.GatewayIp))
             {
-                string gwPart = $"Gateway: {state.GatewayIp}";
+                string gwVal = state.GatewayIp;
                 if (!string.IsNullOrEmpty(state.GatewayMac))
                 {
-                    gwPart += $" [{state.GatewayMac}]";
+                    gwVal += $" [{state.GatewayMac}]";
                 }
-                parts.Add(gwPart);
+                parts.Add($"Gateway: {gwVal}");
+                GatewayValue = gwVal;
+                HasGateway = true;
             }
+            else
+            {
+                GatewayValue = string.Empty;
+                HasGateway = false;
+            }
+
             if (!string.IsNullOrEmpty(state.Bssid))
             {
                 parts.Add($"AP: [{state.Bssid}]");
+                ApValue = $"[{state.Bssid}]";
+                HasAp = true;
             }
+            else
+            {
+                ApValue = string.Empty;
+                HasAp = false;
+            }
+
             if (!string.IsNullOrEmpty(state.DnsServerName))
             {
                 parts.Add($"DNS: {state.DnsServerName}");
+                DnsLabel = "DNS:";
+                DnsValue = state.DnsServerName;
+                HasDns = true;
             }
             else if (!string.IsNullOrEmpty(state.DnsSuffix))
             {
                 parts.Add($"Domain: {state.DnsSuffix}");
+                DnsLabel = "Domain:";
+                DnsValue = state.DnsSuffix;
+                HasDns = true;
+            }
+            else
+            {
+                DnsLabel = "DNS:";
+                DnsValue = string.Empty;
+                HasDns = false;
             }
             GatewayInfoText = string.Join("  \u2022  ", parts);
 
@@ -289,7 +366,7 @@ namespace WireFox.ViewModels
 
         private void OnTunnelDetailsUpdated(WireGuardTunnelInfo info)
         {
-            _dispatcher.Invoke(() =>
+            _dispatcher.InvokeAsync(() =>
             {
                 if (!string.IsNullOrEmpty(info.InterfaceName))
                 {
@@ -303,7 +380,7 @@ namespace WireFox.ViewModels
 
         private void OnHandshakeUpdated(DateTime? handshakeUtc)
         {
-            _dispatcher.Invoke(() =>
+            _dispatcher.InvokeAsync(() =>
             {
                 if (!handshakeUtc.HasValue)
                 {
@@ -321,7 +398,7 @@ namespace WireFox.ViewModels
 
         private void OnSessionTimerUpdated(TimeSpan? remaining)
         {
-            _dispatcher.Invoke(() =>
+            _dispatcher.InvokeAsync(() =>
             {
                 if (!remaining.HasValue || remaining.Value <= TimeSpan.Zero)
                 {

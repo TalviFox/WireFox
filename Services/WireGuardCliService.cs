@@ -305,7 +305,11 @@ namespace WireFox.Services
                             var names = output.Split(new[] { ' ', '\r', '\n', '\t' }, StringSplitOptions.RemoveEmptyEntries);
                             foreach (var n in names)
                             {
-                                active.Add(n.Trim());
+                                string trimmed = n.Trim();
+                                if (IsValidInterfaceName(trimmed))
+                                {
+                                    active.Add(trimmed);
+                                }
                             }
                         }
                     }
@@ -316,7 +320,26 @@ namespace WireFox.Services
                 }
             }
 
-            // Also check network adapters for WireGuard Tunnel adapters that are UP
+            // 2. Also check running WireGuard NT tunnel services in SCM
+            try
+            {
+                var services = ServiceController.GetServices();
+                foreach (var s in services)
+                {
+                    if (s.ServiceName.StartsWith("WireGuardTunnel$", StringComparison.OrdinalIgnoreCase) &&
+                        s.Status == ServiceControllerStatus.Running)
+                    {
+                        string tunnelName = s.ServiceName.Substring("WireGuardTunnel$".Length);
+                        if (IsValidInterfaceName(tunnelName))
+                        {
+                            active.Add(tunnelName);
+                        }
+                    }
+                }
+            }
+            catch { }
+
+            // 3. Fallback: check Wintun network adapters that are UP and valid by spec
             try
             {
                 var interfaces = NetworkInterface.GetAllNetworkInterfaces();
@@ -326,7 +349,10 @@ namespace WireFox.Services
                         (ni.Description.Contains("WireGuard", StringComparison.OrdinalIgnoreCase) ||
                          ni.Description.Contains("Wintun", StringComparison.OrdinalIgnoreCase)))
                     {
-                        active.Add(ni.Name);
+                        if (IsValidInterfaceName(ni.Name))
+                        {
+                            active.Add(ni.Name);
+                        }
                     }
                 }
             }
@@ -345,7 +371,10 @@ namespace WireFox.Services
             // 1. Active interfaces
             foreach (var act in GetActiveInterfaceNames())
             {
-                tunnels.Add(act);
+                if (IsValidInterfaceName(act))
+                {
+                    tunnels.Add(act);
+                }
             }
 
             // 2. Running or installed tunnel services
@@ -356,7 +385,11 @@ namespace WireFox.Services
                 {
                     if (s.ServiceName.StartsWith("WireGuardTunnel$", StringComparison.OrdinalIgnoreCase))
                     {
-                        tunnels.Add(s.ServiceName.Substring("WireGuardTunnel$".Length));
+                        string name = s.ServiceName.Substring("WireGuardTunnel$".Length);
+                        if (IsValidInterfaceName(name))
+                        {
+                            tunnels.Add(name);
+                        }
                     }
                 }
             }
@@ -412,7 +445,7 @@ namespace WireFox.Services
                         {
                             name = Path.GetFileNameWithoutExtension(name);
                         }
-                        if (!string.IsNullOrWhiteSpace(name))
+                        if (IsValidInterfaceName(name))
                         {
                             tunnels.Add(name);
                         }
@@ -470,30 +503,21 @@ namespace WireFox.Services
         {
             if (string.IsNullOrWhiteSpace(interfaceName)) return false;
 
-            // Check active kernel interface first
-            var activeInterfaces = GetActiveInterfaceNames();
-            if (activeInterfaces.Contains(interfaceName, StringComparer.OrdinalIgnoreCase))
-            {
-                return true;
-            }
-
-            // Check Windows service
+            // Check Windows service directly first (fastest, targeted SCM query, 0 subprocess churn)
             try
             {
                 string serviceName = GetServiceName(interfaceName);
-                var services = ServiceController.GetServices();
-                var sc = services.FirstOrDefault(s => string.Equals(s.ServiceName, serviceName, StringComparison.OrdinalIgnoreCase));
-                
-                if (sc != null)
+                using var sc = new ServiceController(serviceName);
+                if (sc.Status == ServiceControllerStatus.Running || sc.Status == ServiceControllerStatus.StartPending)
                 {
-                    return sc.Status == ServiceControllerStatus.Running || sc.Status == ServiceControllerStatus.StartPending;
+                    return true;
                 }
             }
-            catch (Exception ex)
-            {
-                LoggingService.Instance.Debug("WireGuardCli", $"IsTunnelServiceRunning check error: {ex.Message}");
-            }
-            return false;
+            catch { }
+
+            // Check active kernel interface fallback
+            var activeInterfaces = GetActiveInterfaceNames();
+            return activeInterfaces.Contains(interfaceName, StringComparer.OrdinalIgnoreCase);
         }
 
         public async Task<bool> StartTunnelAsync(string interfaceName, string? configPath = null)
@@ -630,9 +654,19 @@ namespace WireFox.Services
                         }
                         else if (existingService.Status == ServiceControllerStatus.StopPending)
                         {
-                            LoggingService.Instance.Warning("WireGuardCli", 
-                                $"Service '{serviceName}' is in StopPending state. Escalating immediately to force-kill...");
-                            ForceKillServiceProcess(serviceName);
+                            LoggingService.Instance.Info("WireGuardCli", 
+                                $"Service '{serviceName}' is already in StopPending state. Waiting up to 8s for graceful completion...");
+                            try
+                            {
+                                existingService.WaitForStatus(ServiceControllerStatus.Stopped, TimeSpan.FromSeconds(8));
+                                LoggingService.Instance.Success("WireGuardCli", $"Service '{serviceName}' completed stop.");
+                            }
+                            catch (Exception ex)
+                            {
+                                LoggingService.Instance.Warning("WireGuardCli", 
+                                    $"Service '{serviceName}' StopPending wait timed out ({ex.Message}). Escalating to force-kill...");
+                                ForceKillServiceProcess(serviceName);
+                            }
                         }
                         else if (existingService.CanStop)
                         {
@@ -640,7 +674,7 @@ namespace WireFox.Services
                             {
                                 LoggingService.Instance.Info("WireGuardCli", $"Stopping service '{serviceName}'...");
                                 existingService.Stop();
-                                existingService.WaitForStatus(ServiceControllerStatus.Stopped, TimeSpan.FromSeconds(3));
+                                existingService.WaitForStatus(ServiceControllerStatus.Stopped, TimeSpan.FromSeconds(8));
                                 LoggingService.Instance.Success("WireGuardCli", $"Service '{serviceName}' stopped.");
                             }
                             catch (Exception ex)
@@ -658,9 +692,28 @@ namespace WireFox.Services
                         }
                     }
 
-                    // If still running or if we wish to clean up ghost interfaces
+                    // Allow NDIS and Wintun driver up to 1000ms to finish unregistering the virtual adapter in-memory (no wg.exe subprocess churn)
+                    for (int i = 0; i < 10; i++)
+                    {
+                        bool adapterPresent = System.Net.NetworkInformation.NetworkInterface.GetAllNetworkInterfaces()
+                            .Any(ni => string.Equals(ni.Name, interfaceName, StringComparison.OrdinalIgnoreCase) ||
+                                       string.Equals(ni.Description, interfaceName, StringComparison.OrdinalIgnoreCase));
+                        if (!adapterPresent) break;
+                        Thread.Sleep(100);
+                    }
+
+                    // Only perform service deletion if the service is STILL unrecoverably stuck after force-kill
                     if (IsTunnelServiceRunning(interfaceName))
                     {
+                        LoggingService.Instance.Warning("WireGuardCli", 
+                            $"Interface '{interfaceName}' still active after stop/kill attempts. Removing stuck service entry...");
+
+                        // Crucial: Release the .NET ServiceController handle before running sc delete,
+                        // otherwise Windows holds the service in ERROR_SERVICE_MARKED_FOR_DELETE (Error 1072).
+                        existingService?.Close();
+                        existingService?.Dispose();
+                        existingService = null;
+
                         try
                         {
                             var psi = new ProcessStartInfo
@@ -674,14 +727,14 @@ namespace WireFox.Services
                             proc?.WaitForExit(3000);
                         }
                         catch { }
-                    }
 
-                    // Final check: if still running, execute secondary force-kill
-                    if (IsTunnelServiceRunning(interfaceName))
-                    {
-                        LoggingService.Instance.Warning("WireGuardCli", 
-                            $"Interface '{interfaceName}' still reported running. Executing secondary force termination...");
-                        ForceKillServiceProcess(serviceName);
+                        // Final check: if still running, execute secondary force-kill
+                        if (IsTunnelServiceRunning(interfaceName))
+                        {
+                            LoggingService.Instance.Warning("WireGuardCli", 
+                                $"Interface '{interfaceName}' still reported running. Executing secondary force termination...");
+                            ForceKillServiceProcess(serviceName);
+                        }
                     }
 
                     FlushDnsCache();

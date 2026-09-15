@@ -60,8 +60,8 @@ namespace WireFox.ViewModels
             RunScanCommand = new RelayCommand(RunDiagnosticsScan);
 
             UpdateSummary();
-            WatchdogService.Instance.TunnelDetailsUpdated += _ => UpdateSummary();
-            NetworkMonitorService.Instance.NetworkSettled += _ => UpdateSummary();
+            WatchdogService.Instance.TunnelDetailsUpdated += _ => System.Windows.Application.Current?.Dispatcher?.InvokeAsync(UpdateSummary);
+            NetworkMonitorService.Instance.NetworkSettled += _ => System.Windows.Application.Current?.Dispatcher?.InvokeAsync(UpdateSummary);
         }
 
         private void UpdateSummary()
@@ -142,6 +142,26 @@ namespace WireFox.ViewModels
 
             LoggingService.Instance.Success("Diagnostics", "=== DIAGNOSTIC SCAN COMPLETE ===");
             UpdateSummary();
+
+            if (!cli.IsInstalled)
+            {
+                NotificationService.Instance.ShowNotification("Diagnostic Scan Warning", "WireGuard CLI tools not detected on this system.");
+            }
+            else if (active.Count > 0)
+            {
+                string tunnelText = active.Count == 1 ? "1 active tunnel" : $"{active.Count} active tunnels";
+                NotificationService.Instance.ShowNotification("Diagnostic Scan Complete", $"All systems nominal (CLI ready, {tunnelText}).");
+            }
+            else
+            {
+                string profileText = discovered.Count switch
+                {
+                    0 => "no tunnel profiles found",
+                    1 => "1 tunnel profile found",
+                    _ => $"{discovered.Count} tunnel profiles found"
+                };
+                NotificationService.Instance.ShowNotification("Diagnostic Scan Complete", $"Scan complete: WireGuard CLI ready, {profileText}.");
+            }
         }
     }
 }
