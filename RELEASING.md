@@ -1,12 +1,12 @@
 # WireFox Release Guide & Integrity Workflow
 
 > [!IMPORTANT]
-> **🤖 ATTENTION AI ASSISTANTS & MAINTAINERS: READ THIS BEFORE RELEASING**
+> **Cryptographic Trust & Release Integrity Requirement**
 > WireFox uses a strict **SHA-256 cryptographic trust model**. All installer scripts (`install.ps1`), in-app self-updaters (`UpdateService.cs`), and external auditors (`verify.ps1`) verify that the downloaded executable matches the cryptographic hash published on GitHub.
 >
 > If you upload a binary without its matching `SHA256SUMS.txt` or if you re-compile the executable after creating the release, **users will receive a CHECKSUM MISMATCH warning and updates will abort.**
 >
-> **Always use the automated release script or follow this checklist to the letter.**
+> **Always use the automated release script (`release.ps1`) or follow the manual checklist below.**
 
 ---
 
