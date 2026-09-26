@@ -435,7 +435,7 @@ section[id] {
   color: #ffffff;
 }
 
-.hero-brand-heading span {
+.hero-brand-heading span.brand-fox {
   background: linear-gradient(135deg, #a5f3fc 0%, #38bdf8 55%, #0284c7 100%);
   -webkit-background-clip: text;
   background-clip: text;
@@ -444,13 +444,14 @@ section[id] {
 }
 
 .hero-tagline {
+  display: block;
   font-size: clamp(1.4rem, 2.8vw, 2.1rem);
   font-weight: 600;
   letter-spacing: -0.025em;
   line-height: 1.25;
   color: var(--text-primary);
   max-width: 820px;
-  margin: 0 auto 20px;
+  margin: 16px auto 20px;
   background: linear-gradient(135deg, #ffffff 40%, #bae6fd 80%, #7dd3fc 100%);
   -webkit-background-clip: text;
   background-clip: text;
