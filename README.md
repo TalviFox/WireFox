@@ -1,62 +1,42 @@
-# WireFox
+<p align="center">
+  <img src="Assets/wirefox_icon.png" alt="WireFox Logo" width="128" height="128" />
+</p>
 
-<div align="center">
-  <img src="wirefox_icon.png" width="160" alt="WireFox Logo" />
-  <br />
-  <strong>Automated Roaming & Watchdog Manager for WireGuard on Windows</strong>
-  <br />
-  <em>The WireGuard companion fox you didn't think you'd need.</em>
-  <br />
+<h1 align="center">WireFox</h1>
+
+<p align="center">
+  <em>Intelligent Network Roaming &amp; Watchdog Manager for WireGuard on Windows</em><br>
+  <em>The WireGuard companion fox you didn't know you needed.</em><br>
   <em>Crafted with care by FoxDen Software</em>
-  <p>
-    <a href="LICENSE"><img src="https://img.shields.io/badge/License-PolyForm_Perimeter_1.0.0-blue.svg" alt="License: PolyForm Perimeter 1.0.0" /></a>
-    <img src="https://img.shields.io/badge/.NET-10.0-purple.svg" alt=".NET 10.0" />
-    <img src="https://img.shields.io/badge/Platform-Windows%2010%20%7C%2011-0078D6.svg" alt="Windows 10 / 11" />
-    <a href="https://github.com/microsoft/winget-pkgs/pull/433833"><img src="https://img.shields.io/badge/WinGet-FoxDenSoftware.WireFox-blue?logo=windows&logoColor=white" alt="WinGet Package" /></a>
-    <a href="https://github.com/TalviFox/WireFox/releases"><img src="https://img.shields.io/github/downloads/TalviFox/WireFox/total?color=orange&label=Downloads" alt="GitHub Downloads" /></a>
-  </p>
-</div>
+</p>
+
+<p align="center">
+  <a href="https://github.com/TalviFox/WireFox"><img src="https://img.shields.io/badge/platform-Windows%2010%20%7C%2011-blue.svg" alt="Platform" /></a>
+  <a href="https://dotnet.microsoft.com/"><img src="https://img.shields.io/badge/.NET-10.0%20(Self--Contained)-purple.svg" alt="Runtime" /></a>
+  <a href="https://github.com/TalviFox/WireFox"><img src="https://img.shields.io/badge/Telemetry-0%20(100%25%20Private)-success.svg" alt="Zero Telemetry" /></a>
+  <a href="https://www.wireguard.com/"><img src="https://img.shields.io/badge/Kernel%20Driver-Official%20WireGuardNT-success.svg" alt="Driver" /></a>
+  <a href="https://github.com/microsoft/winget-pkgs/pull/433833"><img src="https://img.shields.io/badge/WinGet-FoxDenSoftware.WireFox-blue?logo=windows&logoColor=white" alt="WinGet Package" /></a>
+  <a href="https://github.com/TalviFox/WireFox/releases"><img src="https://img.shields.io/github/downloads/TalviFox/WireFox/total?color=orange&label=Downloads" alt="GitHub Downloads" /></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-PolyForm%20Perimeter-blue.svg" alt="License" /></a>
+</p>
+
+> *"On iOS and Android, WireGuard connects when you leave the house and disconnects on your home Wi-Fi. On Windows laptops... you were left clicking buttons manually like a caveman or hacking fragile Task Scheduler scripts."*
 
 ---
 
-## ⚡ The Missing Piece of WireGuard on Windows
+## ⚡ TL;DR
 
-On mobile devices (iOS / Android), WireGuard has native on-demand rules: your phone automatically connects to VPN when you leave your house, and turns off when you're connected to home Wi-Fi. 
+On mobile devices, WireGuard has seamless on-demand rules: your phone automatically engages the VPN when you connect to public networks, and gracefully turns off when you're back on home Wi-Fi. On Windows, however, laptops have historically lacked intelligent roaming, leaving users with an annoying choice between manual toggling or sluggish speeds when local LAN traffic gets routed through remote tunnels.
 
-On Windows, however, laptops have historically lacked intelligent roaming. Users were left with only two choices: manually clicking connect every time they leave the house, or hacking together fragile Task Scheduler scripts.
+**WireFox** bridges that gap. It is a lightweight, modern background assistant and system tray daemon for Windows that automates your WireGuard tunnel based on your current network environment. It validates trusted networks using hardware ARP gateway probing (`iphlpapi.dll`) to prevent evil-twin Wi-Fi spoofing, continuously monitors UDP handshake health, and provides instant tray controls.
 
-**WireFox** bridges that gap. It is a lightweight, modern background assistant and system tray daemon for Windows that automates your WireGuard tunnel based on your current network environment.
-
----
-
-## ✨ Features
-
-- 🔄 **Intelligent Network Roaming**
-  - **Auto-Bypass on Trusted Wi-Fi:** Disconnects VPN when connected to your home or office Wi-Fi for full gigabit LAN speeds.
-  - **Auto-Connect on Untrusted Networks:** Automatically spins up the WireGuard tunnel the moment you connect to an open or untrusted network (coffee shops, hotels, airports).
-- 🛡️ **Gateway MAC (ARP) Anti-Spoofing**
-  - Identifies trusted networks not just by SSID name, but by default gateway MAC address (`iphlpapi.dll` SendARP).
-  - Protects Ethernet connections and guards against rogue Wi-Fi access points spoofing your home SSID.
-- 🐕 **Handshake & Session Watchdog**
-  - Actively polls kernel handshake timestamps via the official `wg.exe` command layer.
-  - Detects silent UDP drops, captive portals, and dead tunnels.
-  - Built-in timer controls: pause protection for 15 minutes or temporarily switch to split-tunnel mode.
-- 💻 **Native Windows Experience**
-  - Built with modern **WPF** and clean Windows 10/11 dark/light themes.
-  - Sits quietly in the Windows System Tray with quick controls.
-  - Native Windows Toast notifications with actionable inline buttons.
-  - Starts silently on Windows boot via elevated Scheduled Task without annoying UAC prompts.
-- 🔒 **Zero Bloat, Zero Telemetry**
-  - No accounts, no background analytics, no ads.
-  - Interacts directly with the official, audited **WireGuardNT** service driver.
+<p align="center">
+  <img src="docs/assets/screenshots/WireFox Main Screen.png" alt="WireFox Dashboard" width="850" />
+</p>
 
 ---
 
-## 🚀 Quick Start & Installation
-
-### Requirements
-- **Windows 10 (version 19041+) or Windows 11**
-- **Official WireGuard for Windows** installed ([wireguard.com/install](https://www.wireguard.com/install/))
+## 🚀 Quick Install
 
 ### 🪟 Windows Package Manager (WinGet)
 
@@ -66,65 +46,75 @@ winget install FoxDenSoftware.WireFox
 
 ### ⚡ One-Line Install (PowerShell)
 
-Run the following in PowerShell (Administrator recommended):
+Run in PowerShell as Administrator:
 
 ```powershell
 irm https://raw.githubusercontent.com/TalviFox/WireFox/main/install.ps1 | iex
 ```
 
-> This automatically fetches the latest release, installs WireFox to `Program Files`, and adds a Start Menu shortcut.
+> [!NOTE]
+> **Why Elevation is Required:** Managing Windows kernel tunnel services (`WireGuardTunnel$...`), routing table modifications, and raw ARP gateway queries requires Windows Administrator privileges. WireFox runs elevated silently at logon via a secure Windows Scheduled Task without prompting UAC on every boot.
 
-### 📦 Manual Download
-1. Download the latest `WireFox.exe` from [Releases](https://github.com/TalviFox/WireFox/releases/latest).
-2. Launch `WireFox.exe` as Administrator (required to manage Windows tunnel services).
-3. Select your tunnel in **Settings** (or import a `.conf` file).
-4. Add your home Wi-Fi or router to **Trusted Networks**.
+Prefer a portable single-file executable? Grab `WireFox.exe` directly from the [Releases](https://github.com/TalviFox/WireFox/releases) page.
 
-### 🔒 Verify Binary Integrity (SHA-256)
-WireFox is open-source and independent. You can audit the integrity of your binary directly against GitHub Releases at any time without commercial code-signing:
+---
+
+## ✨ Features at a Glance
+
+🔄 **Intelligent Network Roaming**  
+&nbsp;&nbsp;&nbsp;&nbsp;Automatically disconnects and bypasses the tunnel when connected to your home or office Wi-Fi for full gigabit LAN speeds; automatically re-engages WireGuard the second you connect to public Wi-Fi, hotel portals, or cellular hotspots.
+
+🛡️ **Gateway MAC (ARP) Anti-Spoofing**  
+&nbsp;&nbsp;&nbsp;&nbsp;Identifies trusted networks not just by Wi-Fi SSID name, but by default gateway MAC address using Layer-2 `SendARP`. Protects Ethernet connections and prevents "evil twin" rogue access points from tricking your PC into disabling VPN.
+
+🐕 **Handshake & Session Watchdog**  
+&nbsp;&nbsp;&nbsp;&nbsp;Actively monitors kernel handshake freshness via the official WireGuardNT command layer. Detects silent UDP drops, firewall blocks, captive portals, and driver sleep stalls, automatically executing graceful recovery before you notice a dropped connection.
+
+🎨 **Dynamic 5-State Fox Shield**  
+&nbsp;&nbsp;&nbsp;&nbsp;Glanceable, high-resolution visual feedback both in your system tray and on the main dashboard:
+* 🟢 **Emerald Green:** Tunnel Active & Encrypted on untrusted networks.
+* 🔷 **Classic Teal:** Connected to a Trusted Network (LAN / Wi-Fi) - Tunnel gracefully Bypassed.
+* 🟠 **Amber Orange:** Temporary Session Active (15m Pause, Split-Tunnel, or Connecting).
+* 🔴 **Crimson Red:** Unprotected Alert - Disconnected on an untrusted public network.
+* ⚪ **Monochrome Gray:** Inactive / Manually Disabled / Offline (Airplane Mode).
+
+⚡ **Context-Aware Quick Actions**  
+&nbsp;&nbsp;&nbsp;&nbsp;Smart status controls that adapt to your connection state:
+* **Dynamic Pause / Resume Toggle:** Pause protection for 15 minutes when needed; while paused, the button transforms into **Resume VPN** ▶️ so you can cancel early with a single click.
+* **Smart Split-Tunneling:** Temporarily routes only specific subnets through the tunnel; grays out with clear tooltips if not configured.
+* **Contextual Full Tunnel / Restart:** Restore full routing when split-tunneling, or perform a clean **Restart Tunnel** 🔄 connection drop and key renegotiation for instant troubleshooting.
+
+💻 **Native Windows 10 & 11 Experience**  
+&nbsp;&nbsp;&nbsp;&nbsp;Crafted with modern WPF and native dark/light themes. Sits quietly in the system tray, responds to interactive Windows Toast notifications with actionable buttons, and consumes zero CPU while idle.
+
+🔒 **Zero Telemetry & 100% Audited Driver**  
+&nbsp;&nbsp;&nbsp;&nbsp;No accounts, no external cloud dependencies, no background telemetry, and zero ads. Interacts directly with the official, audited **WireGuardNT** service driver.
+
+---
+
+## 🔒 Binary Verification & Security Audit
+
+WireFox is open-source and independent. You can cryptographically verify the integrity of your downloaded executable directly against GitHub Releases at any time without trusting third-party certificates:
+
 ```powershell
 irm https://raw.githubusercontent.com/TalviFox/WireFox/main/verify.ps1 | iex
 ```
 
-### 🧹 Clean Uninstall
-WireFox can be removed natively from Windows Settings > **Installed Apps**, directly inside WireFox under **Settings > Clean System Removal**, or via PowerShell:
+---
+
+## 🧹 Clean System Removal
+
+WireFox respects your system. It leaves no lingering drivers, registry residue, or background daemons. You can uninstall natively from **Windows Settings > Installed Apps**, via **Settings > Clean System Removal** in the app, or with one command:
+
 ```powershell
 irm https://raw.githubusercontent.com/TalviFox/WireFox/main/uninstall.ps1 | iex
 ```
 
 ---
 
-## 📝 Changelog
-
-### [v1.0.6](https://github.com/TalviFox/WireFox/releases/tag/v1.0.6)
-- **Graceful SCM Tunnel Teardowns:** Extended SCM stop timeout to 8s with `StopPending` state handling, allowing Windows NDIS and Wintun driver to unbind cleanly without false timeouts.
-- **Service Deletion Guard:** Eliminated premature `sc.exe delete` calls on healthy stops, preventing Win32 Error 1072 (`ERROR_SERVICE_MARKED_FOR_DELETE`) and enabling instant (<1s) starts via existing service reuse.
-- **Trusted Settle Optimization:** Guarded `OnNetworkSettled` to prevent redundant teardowns, `taskkill` calls, and DNS cache flushing while sitting on trusted networks.
-- **Stale Tunnel Outage/Sleep Recovery:** Automatically detects and gracefully refreshes tunnels with stale handshakes when reconnecting after extended network outages or sleep.
-- **Non-Destructive Watchdog Recovery:** Refactored `ForceRestartTunnelAsync()` to attempt a gentle restart first before escalating to full reset.
-- **Strict WireGuard Scope Enforcement:** Enforced strict WireGuard naming specification and Windows NT service backing during discovery, eliminating phantom tunnel detections from NDIS filter miniports, packet capture bindings (Npcap/WinPcap), and virtual bridges.
-- **UI & UX Polish:** Added text wrapping and hover tooltips for long tunnel names, toast feedback for manual diagnostic scans, bold category labels on the Status page, and side-scrolling for log console entries.
-
-### [v1.0.5](https://github.com/TalviFox/WireFox/releases/tag/v1.0.5)
-- **Fix:** Replaced native `wireguard.exe` tunnel uninstallation with silent `sc.exe delete` to eliminate "Service does not exist" Error UI popups when disconnecting/trusting networks.
-- **Fix:** Overhauled gateway storage logic to uniquely identify trusted networks by IP + MAC Address, resolving a major bug where multiple networks sharing the same default gateway (e.g. 192.168.1.1) would overwrite each other and trigger false-positive anti-spoofing lockouts.
-
-### [v1.0.4](https://github.com/TalviFox/WireFox/releases/tag/v1.0.4)
-- **Resilient Tunnel Deactivation & Zombie Prevention:** Resolved the WireGuard deactivation freeze where driver deadlocks left services spinning in `StopPending` state. Added graceful stop timeout (3s) with immediate escalation to hosting process termination, SCM driver unbinding, and active DNS cache resolver flushing (`DnsFlushResolverCache`) to prevent Windows Filtering Platform (WFP) kernel blackholes.
-- **Interactive Tray Control:** Added direct **Kill WireGuard (Force Stop)** action item to the system tray.
-- **Differential Watchdog Diagnostics:** Integrated Layer-2 default gateway ARP probing (`ArpService`) and ICMP verification to validate physical network reachability before attributing connection loss to WireGuard, eliminating false-positive restarts when physical connectivity is lost.
-- **Active End-to-End Connectivity Probing:** Handshake watchdog actively tests HTTP 204 endpoints (`generate_204`) with fallback DNS resolution checks against `msftconnecttest.com` to detect silent UDP drops and dead routes.
-- **Intelligent Toast Notification Debouncing:** Replaced rapid notification spam during network transitions with in-place Windows toast replacements (tagged `wirefox` group) and strict cooldown timers (10m for network discovery, 3m for watchdog alerts).
-- **Encoding & Script Hardening:** Fixed PowerShell emoji mojibake across `install.ps1`, `uninstall.ps1`, `verify.ps1`, and `release.ps1` by moving to runtime surrogate generation, XML entity escaping, and enforcing UTF-8 without BOM across all build pipelines.
-- **Re-tooled Installer Logic:** Updated install options and double click behavior as well as script theming.
-
-> For older releases, see [GitHub Releases](https://github.com/TalviFox/WireFox/releases).
-
----
-
 ## 🛠️ Building from Source
 
-WireFox is built on **.NET 10.0 Windows Desktop SDK**.
+WireFox is built using the **.NET 10.0 Windows Desktop SDK**.
 
 ```powershell
 # Clone the repository
@@ -152,8 +142,8 @@ Every feature, script, and build is actively dogfooded, tested, and run on my ow
 WireFox source code is available under the **[PolyForm Perimeter License 1.0.0](LICENSE)**.
 
 ### What this means:
-- ✅ **Open to inspect, fork, and hack:** You are free to run, study, modify, build, and distribute WireFox for personal, educational, or internal use.
-- 🛡️ **Anti-theft & non-compete protection:** You may not use this software or its source code to provide or market any product or service that competes with WireFox or acts as a commercial substitute for it.
+* ✅ **Open to inspect, fork, and hack:** You are free to run, study, modify, build, and distribute WireFox for personal, educational, or internal use.
+* 🛡️ **Anti-theft & non-compete protection:** You may not use this software or its source code to provide or market any product or service that competes with WireFox or acts as a commercial substitute for it.
 
 For full license terms, see the [LICENSE](LICENSE) file or visit [PolyForm Project](https://polyformproject.org/licenses/perimeter/1.0.0).
 
@@ -161,11 +151,14 @@ For full license terms, see the [LICENSE](LICENSE) file or visit [PolyForm Proje
 
 ## 🏷️ Trademarks & Attribution
 
-- **[WireGuard®](https://www.wireguard.com)** is a registered trademark of **Jason A. Donenfeld**.
-- **WireFox** is an independent companion project developed by **FoxDen Software**. It is not affiliated with, endorsed by, or sponsored by Jason A. Donenfeld or the official WireGuard development team.
+* **[WireGuard®](https://www.wireguard.com)** is a registered trademark of **Jason A. Donenfeld**.
+* **WireFox** is an independent companion project developed by **FoxDen Software**. It is not affiliated with, endorsed by, or sponsored by Jason A. Donenfeld or the official WireGuard development team.
 
 ---
 
-## 🛡️ Early Access & Security Notice
-
-WireFox is independent, early-access utility software provided on an **"AS IS" and "AS AVAILABLE" basis, without warranties of any kind**, express or implied. While WireFox is actively maintained, dogfooded daily, and designed to automate and protect WireGuard connections, local network environments (such as captive portals, hotel Wi-Fi, and adapter driver states) can vary widely. Users are solely responsible for ensuring their network environment and personal data security requirements are satisfied.
+<p align="center">
+  <a href="https://github.com/TalviFox">
+    <img src="Assets/FoxDen_Minimal_Universal.png" alt="FoxDen Software" width="220" />
+  </a><br>
+  <sub><em>Crafted with care by <strong>FoxDen Software</strong></em></sub>
+</p>

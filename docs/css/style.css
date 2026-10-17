@@ -1265,6 +1265,33 @@ section[id] {
   line-height: 1.5;
 }
 
+.footer-brand-badge {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-top: 28px;
+  padding-top: 24px;
+  border-top: 1px solid var(--border-subtle);
+}
+
+.footer-brand-badge a {
+  display: inline-flex;
+  align-items: center;
+  text-decoration: none;
+}
+
+.footer-brand-badge img {
+  height: 48px;
+  width: auto;
+  opacity: 0.85;
+  transition: opacity var(--transition-fast), transform var(--transition-fast);
+}
+
+.footer-brand-badge a:hover img {
+  opacity: 1;
+  transform: translateY(-2px);
+}
+
 /* Responsive adjustments */
 @media (max-width: 768px) {
   .nav-links {
