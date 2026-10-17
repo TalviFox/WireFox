@@ -456,7 +456,7 @@
         <div class="install-tabs-nav">
           <button class="install-tab-btn active" data-pane="pane-ps" id="install-tab-ps">⚡ One-Line PowerShell</button>
           <button class="install-tab-btn" data-pane="pane-manual" id="install-tab-manual">📦 Manual Download</button>
-          <button class="install-tab-btn" data-pane="pane-winget" id="install-tab-winget">🪟 WinGet <small style="opacity:0.6; font-size:0.75em; font-weight:normal;">(Coming Soon)</small></button>
+          <button class="install-tab-btn" data-pane="pane-winget" id="install-tab-winget">🪟 WinGet</button>
           <button class="install-tab-btn" data-pane="pane-verify" id="install-tab-verify">🔒 Verify Integrity</button>
         </div>
 
@@ -466,8 +466,8 @@
             <div class="install-step">
               <div class="step-num">1</div>
               <div class="step-content">
-                <h4>Windows Package Manager <span style="font-size:0.75rem; font-weight:normal; opacity:0.6; margin-left:6px;">(Pending Approval)</span></h4>
-                <p>Pending Microsoft repository approval. Once merged, it will be available directly via:</p>
+                <h4>Windows Package Manager (WinGet)</h4>
+                <p>Install WireFox directly via Windows Package Manager from any Terminal or PowerShell prompt:</p>
                 <div class="terminal-command-box">
                   <span class="terminal-prefix">&gt;</span>
                   <code class="terminal-code" id="winget-pane-code">winget install FoxDenSoftware.WireFox</code>
@@ -476,9 +476,6 @@
                     <span>Copy</span>
                   </button>
                 </div>
-                <p style="font-size:0.82rem; opacity:0.6; margin-top:0.6rem; margin-bottom:0;">
-                  In the meantime, please use the <strong>⚡ One-Line PowerShell</strong> or <strong>📦 Manual Download</strong> tab above.
-                </p>
               </div>
             </div>
             <div class="install-step">
@@ -714,8 +711,13 @@
       </div>
 
       <div class="footer-bottom">
-        <div>
-          Copyright &copy; 2026 FoxDen Software. Source-available under PolyForm Perimeter License 1.0.0.
+        <div class="footer-bottom-left">
+          <div class="footer-meta-brand">
+            <a href="https://github.com/TalviFox" target="_blank" rel="noopener noreferrer" class="footer-foxden-link" title="Crafted with care by FoxDen Software">
+              <img src="assets/FoxDen_Minimal_Universal.png" alt="FoxDen Software Logo" class="footer-foxden-logo">
+            </a>
+            <span class="footer-copyright">Copyright &copy; 2026 FoxDen Software. Source-available under PolyForm Perimeter License 1.0.0.</span>
+          </div>
           <div class="footer-disclaimer">
             <strong>Early Access &amp; Security Disclaimer:</strong> WireFox is independent, early-access software provided on an "as is" and "as available" basis without warranties of any kind, express or implied. While WireFox is designed to automate and manage WireGuard tunnels, network conditions and local adapter behaviors vary. Users are solely responsible for ensuring their network environment and data security requirements are satisfied.
           </div>
@@ -726,12 +728,6 @@
         <div>
           <a href="#" style="color:var(--brand-frost-light); font-weight:600;">Back to top &uarr;</a>
         </div>
-      </div>
-
-      <div class="footer-brand-badge">
-        <a href="https://github.com/TalviFox" target="_blank" rel="noopener noreferrer" title="FoxDen Software">
-          <img src="assets/FoxDen_Minimal_Universal.png" alt="FoxDen Software Logo">
-        </a>
       </div>
     </div>
   </footer>

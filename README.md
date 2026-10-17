@@ -147,18 +147,16 @@ WireFox source code is available under the **[PolyForm Perimeter License 1.0.0](
 
 For full license terms, see the [LICENSE](LICENSE) file or visit [PolyForm Project](https://polyformproject.org/licenses/perimeter/1.0.0).
 
----
-
-## 🏷️ Trademarks & Attribution
-
-* **[WireGuard®](https://www.wireguard.com)** is a registered trademark of **Jason A. Donenfeld**.
-* **WireFox** is an independent companion project developed by **FoxDen Software**. It is not affiliated with, endorsed by, or sponsored by Jason A. Donenfeld or the official WireGuard development team.
-
----
-
 <p align="center">
   <a href="https://github.com/TalviFox">
     <img src="docs/assets/FoxDen_Minimal_Universal.png" alt="FoxDen Software" width="220" />
   </a><br>
   <sub><em>Crafted with care by <strong>FoxDen Software</strong></em></sub>
 </p>
+
+---
+
+## 🏷️ Trademarks & Attribution
+
+* **[WireGuard®](https://www.wireguard.com)** is a registered trademark of **Jason A. Donenfeld**.
+* **WireFox** is an independent companion project developed by **FoxDen Software**. It is not affiliated with, endorsed by, or sponsored by Jason A. Donenfeld or the official WireGuard development team.
