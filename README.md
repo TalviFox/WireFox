@@ -158,7 +158,7 @@ For full license terms, see the [LICENSE](LICENSE) file or visit [PolyForm Proje
 
 <p align="center">
   <a href="https://github.com/TalviFox">
-    <img src="Assets/FoxDen_Minimal_Universal.png" alt="FoxDen Software" width="220" />
+    <img src="docs/assets/FoxDen_Minimal_Universal.png" alt="FoxDen Software" width="220" />
   </a><br>
   <sub><em>Crafted with care by <strong>FoxDen Software</strong></em></sub>
 </p>
