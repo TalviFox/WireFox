@@ -1,6 +1,10 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
+using System.Linq;
 using System.Windows.Input;
+using System.Windows.Media;
+using System.Windows.Media.Imaging;
 using WireFox.Models;
 using WireFox.Services;
 using Wpf.Ui.Controls;
@@ -9,8 +13,16 @@ namespace WireFox.ViewModels
 {
     public class StatusViewModel : ViewModelBase
     {
+        private static readonly ImageSource? _greenSource = LoadIconSource("wirefox_green.ico");
+        private static readonly ImageSource? _orangeSource = LoadIconSource("wirefox_orange.ico");
+        private static readonly ImageSource? _redSource = LoadIconSource("wirefox_red.ico");
+        private static readonly ImageSource? _graySource = LoadIconSource("wirefox_gray.ico");
+        private static readonly ImageSource? _tealSource = LoadIconSource("wirefox.ico");
+        private static readonly ImageSource? _purpleSource = LoadIconSource("wirefox_purple.ico");
+
         private string _statusText = "Disconnected";
         private SymbolRegular _statusSymbol = SymbolRegular.ShieldDismiss24;
+        private ImageSource? _statusImage = _graySource;
         private string _currentNetworkText = "Checking...";
         private string _gatewayInfoText = string.Empty;
         private string _handshakeAgeText = "None";
@@ -37,6 +49,12 @@ namespace WireFox.ViewModels
         {
             get => _statusSymbol;
             set => SetProperty(ref _statusSymbol, value);
+        }
+
+        public ImageSource? StatusImage
+        {
+            get => _statusImage;
+            set => SetProperty(ref _statusImage, value);
         }
 
         public string CurrentNetworkText
@@ -133,8 +151,113 @@ namespace WireFox.ViewModels
         public bool IsTunnelActive
         {
             get => _isTunnelActive;
-            set => SetProperty(ref _isTunnelActive, value);
+            set
+            {
+                if (SetProperty(ref _isTunnelActive, value))
+                {
+                    OnPropertyChanged(nameof(CanPause));
+                }
+            }
         }
+
+        private string _pauseButtonText = "Pause 15 Mins";
+        public string PauseButtonText
+        {
+            get => _pauseButtonText;
+            set => SetProperty(ref _pauseButtonText, value);
+        }
+
+        private SymbolRegular _pauseButtonSymbol = SymbolRegular.Pause24;
+        public SymbolRegular PauseButtonSymbol
+        {
+            get => _pauseButtonSymbol;
+            set => SetProperty(ref _pauseButtonSymbol, value);
+        }
+
+        private ControlAppearance _pauseButtonAppearance = ControlAppearance.Secondary;
+        public ControlAppearance PauseButtonAppearance
+        {
+            get => _pauseButtonAppearance;
+            set => SetProperty(ref _pauseButtonAppearance, value);
+        }
+
+        private bool _canPauseAction;
+        public bool CanPauseAction
+        {
+            get => _canPauseAction;
+            set
+            {
+                if (SetProperty(ref _canPauseAction, value))
+                {
+                    OnPropertyChanged(nameof(CanPause));
+                }
+            }
+        }
+
+        private string _pauseButtonToolTip = "Temporarily pause VPN tunnel for 15 minutes";
+        public string PauseButtonToolTip
+        {
+            get => _pauseButtonToolTip;
+            set => SetProperty(ref _pauseButtonToolTip, value);
+        }
+
+        private string _splitTunnelButtonText = "Split-Tunnel";
+        public string SplitTunnelButtonText
+        {
+            get => _splitTunnelButtonText;
+            set => SetProperty(ref _splitTunnelButtonText, value);
+        }
+
+        private bool _canSplitTunnel;
+        public bool CanSplitTunnel
+        {
+            get => _canSplitTunnel;
+            set => SetProperty(ref _canSplitTunnel, value);
+        }
+
+        private string _splitTunnelToolTip = "Route only configured subnets through VPN for 15 mins";
+        public string SplitTunnelToolTip
+        {
+            get => _splitTunnelToolTip;
+            set => SetProperty(ref _splitTunnelToolTip, value);
+        }
+
+        private string _fullTunnelButtonText = "Restart Tunnel";
+        public string FullTunnelButtonText
+        {
+            get => _fullTunnelButtonText;
+            set => SetProperty(ref _fullTunnelButtonText, value);
+        }
+
+        private SymbolRegular _fullTunnelButtonSymbol = SymbolRegular.ArrowSync24;
+        public SymbolRegular FullTunnelButtonSymbol
+        {
+            get => _fullTunnelButtonSymbol;
+            set => SetProperty(ref _fullTunnelButtonSymbol, value);
+        }
+
+        private ControlAppearance _fullTunnelButtonAppearance = ControlAppearance.Secondary;
+        public ControlAppearance FullTunnelButtonAppearance
+        {
+            get => _fullTunnelButtonAppearance;
+            set => SetProperty(ref _fullTunnelButtonAppearance, value);
+        }
+
+        private bool _canFullTunnelAction;
+        public bool CanFullTunnelAction
+        {
+            get => _canFullTunnelAction;
+            set => SetProperty(ref _canFullTunnelAction, value);
+        }
+
+        private string _fullTunnelToolTip = "Restart active WireGuard tunnel connection";
+        public string FullTunnelToolTip
+        {
+            get => _fullTunnelToolTip;
+            set => SetProperty(ref _fullTunnelToolTip, value);
+        }
+
+        public bool CanPause => _canPauseAction;
 
         public bool CanTrustCurrentNetwork
         {
@@ -176,9 +299,11 @@ namespace WireFox.ViewModels
         public ICommand TrustCurrentNetworkCommand { get; }
         public ICommand UntrustCurrentNetworkCommand { get; }
         public ICommand UpdateGatewayMacCommand { get; }
-        public ICommand Pause15Command { get; }
+        public ICommand Pause15Command => PauseToggleCommand;
+        public ICommand PauseToggleCommand { get; }
         public ICommand SplitTunnel15Command { get; }
-        public ICommand RevertFullCommand { get; }
+        public ICommand RevertFullCommand => FullTunnelActionCommand;
+        public ICommand FullTunnelActionCommand { get; }
 
         public StatusViewModel()
         {
@@ -188,15 +313,16 @@ namespace WireFox.ViewModels
             TrustCurrentNetworkCommand = new RelayCommand(OnTrustCurrentNetwork);
             UntrustCurrentNetworkCommand = new RelayCommand(OnUntrustCurrentNetwork);
             UpdateGatewayMacCommand = new RelayCommand(OnUpdateGatewayMac);
-            Pause15Command = new RelayCommand(async () => await WatchdogService.Instance.PauseTunnelAsync(TimeSpan.FromMinutes(15)));
+            PauseToggleCommand = new RelayCommand(OnPauseToggleClicked);
             SplitTunnel15Command = new RelayCommand(async () => await WatchdogService.Instance.EnableSplitTunnelAsync(TimeSpan.FromMinutes(15)));
-            RevertFullCommand = new RelayCommand(async () => await WatchdogService.Instance.RevertToFullTunnelAsync());
+            FullTunnelActionCommand = new RelayCommand(OnFullTunnelActionClicked);
 
             WatchdogService.Instance.StatusChanged += OnStatusChanged;
             WatchdogService.Instance.HandshakeUpdated += OnHandshakeUpdated;
             WatchdogService.Instance.TunnelDetailsUpdated += OnTunnelDetailsUpdated;
             WatchdogService.Instance.SessionTimeRemainingUpdated += OnSessionTimerUpdated;
             NetworkMonitorService.Instance.NetworkSettled += OnNetworkSettled;
+            ConfigManager.Instance.ConfigChanged += OnConfigChanged;
 
             // Initial UI state
             ActiveTunnelName = ConfigManager.Instance.Config.WireGuardInterface;
@@ -226,52 +352,244 @@ namespace WireFox.ViewModels
 
         private void UpdateStatus(TunnelStatus status)
         {
+            var netState = NetworkMonitorService.Instance.CurrentState;
             switch (status)
             {
                 case TunnelStatus.Connected:
                     StatusText = "Connected";
                     StatusSymbol = SymbolRegular.ShieldCheckmark24;
-                    _isTunnelActive = true;
+                    StatusImage = _greenSource;
+                    IsTunnelActive = true;
                     IsSessionActive = false;
                     break;
                 case TunnelStatus.Connecting:
                     StatusText = "Connecting...";
                     StatusSymbol = SymbolRegular.ArrowSync24;
-                    _isTunnelActive = false;
+                    StatusImage = _orangeSource;
+                    IsTunnelActive = false;
                     IsSessionActive = false;
                     break;
                 case TunnelStatus.Paused:
                     StatusText = "Paused (15m)";
                     StatusSymbol = SymbolRegular.Pause24;
-                    _isTunnelActive = false;
+                    StatusImage = _orangeSource;
+                    IsTunnelActive = false;
                     IsSessionActive = true;
                     break;
                 case TunnelStatus.SplitTunnel:
                     StatusText = "Split-Tunnel (LAN Only)";
                     StatusSymbol = SymbolRegular.ArrowRouting24;
-                    _isTunnelActive = false;
+                    StatusImage = _orangeSource;
+                    IsTunnelActive = false;
                     IsSessionActive = true;
                     break;
                 case TunnelStatus.Bypassed:
                     StatusText = "Bypassed (Trusted Network)";
                     StatusSymbol = SymbolRegular.Checkmark24;
-                    _isTunnelActive = false;
+                    StatusImage = _tealSource; // Classic Teal Shield on Trusted Network
+                    IsTunnelActive = false;
                     IsSessionActive = false;
                     break;
                 case TunnelStatus.Disconnected:
                 default:
                     StatusText = "Disconnected";
                     StatusSymbol = SymbolRegular.ShieldDismiss24;
-                    _isTunnelActive = false;
+                    IsTunnelActive = false;
                     IsSessionActive = false;
+                    if (netState.IsConnected && !netState.IsTrusted)
+                    {
+                        StatusImage = _redSource; // Problem: Untrusted network with tunnel down
+                    }
+                    else
+                    {
+                        StatusImage = _graySource; // Disabled / Offline / Inactive
+                    }
                     break;
             }
+
+            UpdateQuickActionButtons(status);
+
             OnPropertyChanged(nameof(IsTunnelActive));
+            OnPropertyChanged(nameof(CanPause));
+        }
+
+        private void UpdateQuickActionButtons(TunnelStatus status)
+        {
+            var config = ConfigManager.Instance.Config;
+            string effectiveTunnel = !string.IsNullOrEmpty(ActiveTunnelName) 
+                ? ActiveTunnelName 
+                : (!string.IsNullOrEmpty(config.WireGuardInterface) ? config.WireGuardInterface : "wg0");
+            var profile = config.GetProfile(effectiveTunnel);
+            bool hasSplitTunnel = !string.IsNullOrWhiteSpace(profile.SplitTunnelAllowedIPs);
+
+            // --- Button 1: Pause / Resume ---
+            if (status == TunnelStatus.Paused)
+            {
+                PauseButtonText = "Resume VPN";
+                PauseButtonSymbol = SymbolRegular.Play24;
+                PauseButtonAppearance = ControlAppearance.Primary;
+                CanPauseAction = true;
+                PauseButtonToolTip = "Resume full WireGuard protection immediately";
+            }
+            else if (status == TunnelStatus.Connected || status == TunnelStatus.SplitTunnel)
+            {
+                PauseButtonText = "Pause 15 Mins";
+                PauseButtonSymbol = SymbolRegular.Pause24;
+                PauseButtonAppearance = ControlAppearance.Secondary;
+                CanPauseAction = true;
+                PauseButtonToolTip = "Temporarily pause VPN tunnel for 15 minutes";
+            }
+            else
+            {
+                PauseButtonText = "Pause 15 Mins";
+                PauseButtonSymbol = SymbolRegular.Pause24;
+                PauseButtonAppearance = ControlAppearance.Secondary;
+                CanPauseAction = false;
+                PauseButtonToolTip = "No active tunnel to pause";
+            }
+
+            // --- Button 2: Split-Tunnel ---
+            if (!hasSplitTunnel)
+            {
+                SplitTunnelButtonText = "Split-Tunnel";
+                CanSplitTunnel = false;
+                SplitTunnelToolTip = "Split-Tunnel is not configured. Add AllowedIPs in Settings to enable.";
+            }
+            else if (status == TunnelStatus.SplitTunnel)
+            {
+                SplitTunnelButtonText = "Split-Tunnel Active";
+                CanSplitTunnel = false;
+                SplitTunnelToolTip = "Split-Tunnel is currently active";
+            }
+            else if (status == TunnelStatus.Connected)
+            {
+                SplitTunnelButtonText = "Split-Tunnel";
+                CanSplitTunnel = true;
+                SplitTunnelToolTip = $"Route only configured subnets ({profile.SplitTunnelAllowedIPs}) through VPN for 15 mins";
+            }
+            else if (status == TunnelStatus.Paused)
+            {
+                SplitTunnelButtonText = "Split-Tunnel";
+                CanSplitTunnel = false;
+                SplitTunnelToolTip = "Tunnel is currently paused. Resume VPN first.";
+            }
+            else
+            {
+                SplitTunnelButtonText = "Split-Tunnel";
+                CanSplitTunnel = false;
+                SplitTunnelToolTip = "Tunnel is not running";
+            }
+
+            // --- Button 3: Contextual Full Tunnel / Restart ---
+            if (status == TunnelStatus.SplitTunnel)
+            {
+                FullTunnelButtonText = "Restore Full Tunnel";
+                FullTunnelButtonSymbol = SymbolRegular.ArrowCounterclockwise24;
+                FullTunnelButtonAppearance = ControlAppearance.Primary;
+                CanFullTunnelAction = true;
+                FullTunnelToolTip = "Restore full tunnel routing (route all internet traffic through VPN)";
+            }
+            else if (status == TunnelStatus.Connected)
+            {
+                FullTunnelButtonText = "Restart Tunnel";
+                FullTunnelButtonSymbol = SymbolRegular.ArrowSync24;
+                FullTunnelButtonAppearance = ControlAppearance.Secondary;
+                CanFullTunnelAction = true;
+                FullTunnelToolTip = "Restart active WireGuard tunnel connection and renegotiate keys";
+            }
+            else if (status == TunnelStatus.Paused)
+            {
+                FullTunnelButtonText = "Restart Tunnel";
+                FullTunnelButtonSymbol = SymbolRegular.ArrowSync24;
+                FullTunnelButtonAppearance = ControlAppearance.Secondary;
+                CanFullTunnelAction = false;
+                FullTunnelToolTip = "Tunnel is currently paused. Use Resume VPN to reconnect.";
+            }
+            else
+            {
+                FullTunnelButtonText = "Restart Tunnel";
+                FullTunnelButtonSymbol = SymbolRegular.ArrowSync24;
+                FullTunnelButtonAppearance = ControlAppearance.Secondary;
+                CanFullTunnelAction = false;
+                FullTunnelToolTip = "No active tunnel connection to restart";
+            }
+        }
+
+        private async void OnFullTunnelActionClicked()
+        {
+            if (WatchdogService.Instance.Status == TunnelStatus.SplitTunnel)
+            {
+                await WatchdogService.Instance.RevertToFullTunnelAsync();
+            }
+            else
+            {
+                await WatchdogService.Instance.RestartTunnelAsync();
+            }
+        }
+
+        private void OnConfigChanged(AppConfig cfg)
+        {
+            _dispatcher.InvokeAsync(() => UpdateQuickActionButtons(WatchdogService.Instance.Status));
+        }
+
+        private async void OnPauseToggleClicked()
+        {
+            if (WatchdogService.Instance.Status == TunnelStatus.Paused)
+            {
+                await WatchdogService.Instance.RevertToFullTunnelAsync();
+            }
+            else
+            {
+                await WatchdogService.Instance.PauseTunnelAsync(TimeSpan.FromMinutes(15));
+            }
+        }
+
+        private static ImageSource? LoadIconSource(string iconName)
+        {
+            try
+            {
+                var asm = typeof(StatusViewModel).Assembly;
+                using var resStream = asm.GetManifestResourceStream($"WireFox.Assets.{iconName}")
+                                   ?? asm.GetManifestResourceStream($"WireFox.{iconName}");
+                if (resStream != null)
+                {
+                    var decoder = BitmapDecoder.Create(resStream, BitmapCreateOptions.None, BitmapCacheOption.OnLoad);
+                    var frame = decoder.Frames.OrderByDescending(f => f.PixelWidth).FirstOrDefault() ?? decoder.Frames[0];
+                    if (frame.CanFreeze) frame.Freeze();
+                    return frame;
+                }
+
+                string localPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Assets", iconName);
+                if (File.Exists(localPath))
+                {
+                    using var fs = File.OpenRead(localPath);
+                    var decoder = BitmapDecoder.Create(fs, BitmapCreateOptions.None, BitmapCacheOption.OnLoad);
+                    var frame = decoder.Frames.OrderByDescending(f => f.PixelWidth).FirstOrDefault() ?? decoder.Frames[0];
+                    if (frame.CanFreeze) frame.Freeze();
+                    return frame;
+                }
+
+                localPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, iconName);
+                if (File.Exists(localPath))
+                {
+                    using var fs = File.OpenRead(localPath);
+                    var decoder = BitmapDecoder.Create(fs, BitmapCreateOptions.None, BitmapCacheOption.OnLoad);
+                    var frame = decoder.Frames.OrderByDescending(f => f.PixelWidth).FirstOrDefault() ?? decoder.Frames[0];
+                    if (frame.CanFreeze) frame.Freeze();
+                    return frame;
+                }
+            }
+            catch { }
+            return null;
         }
 
         private void OnNetworkSettled(NetworkState state)
         {
-            _dispatcher.InvokeAsync(() => UpdateNetwork(state));
+            _dispatcher.InvokeAsync(() =>
+            {
+                UpdateNetwork(state);
+                UpdateStatus(WatchdogService.Instance.Status);
+            });
         }
 
         private void UpdateNetwork(NetworkState state)

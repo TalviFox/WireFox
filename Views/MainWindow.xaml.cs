@@ -19,8 +19,13 @@ namespace WireFox.Views
         private readonly System.Drawing.Icon? _greenIcon;
         private readonly System.Drawing.Icon? _orangeIcon;
         private readonly System.Drawing.Icon? _redIcon;
+        private readonly System.Drawing.Icon? _grayIcon;
+        private readonly System.Drawing.Icon? _purpleIcon;
         private TimeSpan? _lastTimeRemaining;
         private bool _isExplicitExit;
+        private ToolStripMenuItem? _pauseTrayMenuItem;
+        private ToolStripMenuItem? _splitTunnelTrayMenuItem;
+        private ToolStripMenuItem? _fullTunnelTrayMenuItem;
 
         public MainWindow()
         {
@@ -30,9 +35,11 @@ namespace WireFox.Views
 
             // Load custom WireFox icons (base and status borders)
             _defaultIcon = LoadAppIcon() ?? SystemIcons.Shield;
-            _greenIcon = CreateStatusIcon(_defaultIcon, System.Drawing.Color.MediumSeaGreen);
-            _orangeIcon = CreateStatusIcon(_defaultIcon, System.Drawing.Color.DarkOrange);
-            _redIcon = CreateStatusIcon(_defaultIcon, System.Drawing.Color.Crimson);
+            _greenIcon = LoadIconNamed("wirefox_green.ico") ?? _defaultIcon;
+            _orangeIcon = LoadIconNamed("wirefox_orange.ico") ?? _defaultIcon;
+            _redIcon = LoadIconNamed("wirefox_red.ico") ?? _defaultIcon;
+            _grayIcon = LoadIconNamed("wirefox_gray.ico") ?? _defaultIcon;
+            _purpleIcon = LoadIconNamed("wirefox_purple.ico") ?? _defaultIcon;
 
             try
             {
@@ -58,9 +65,12 @@ namespace WireFox.Views
             contextMenu.Items.Add(new ToolStripSeparator());
             contextMenu.Items.Add("Kill WireGuard (Force Stop)", null, async (s, e) => await WatchdogService.Instance.KillAllWireGuardAsync());
             contextMenu.Items.Add(new ToolStripSeparator());
-            contextMenu.Items.Add("Pause VPN (15 Mins)", null, async (s, e) => await WatchdogService.Instance.PauseTunnelAsync(TimeSpan.FromMinutes(15)));
-            contextMenu.Items.Add("Split-Tunnel (15 Mins)", null, async (s, e) => await WatchdogService.Instance.EnableSplitTunnelAsync(TimeSpan.FromMinutes(15)));
-            contextMenu.Items.Add("Revert to Full Tunnel", null, async (s, e) => await WatchdogService.Instance.RevertToFullTunnelAsync());
+            _pauseTrayMenuItem = new ToolStripMenuItem("Pause VPN (15 Mins)", null, async (s, e) => await OnTrayPauseToggleClicked());
+            contextMenu.Items.Add(_pauseTrayMenuItem);
+            _splitTunnelTrayMenuItem = new ToolStripMenuItem("Split-Tunnel (15 Mins)", null, async (s, e) => await WatchdogService.Instance.EnableSplitTunnelAsync(TimeSpan.FromMinutes(15)));
+            contextMenu.Items.Add(_splitTunnelTrayMenuItem);
+            _fullTunnelTrayMenuItem = new ToolStripMenuItem("Restart Tunnel", null, async (s, e) => await OnTrayFullTunnelActionClicked());
+            contextMenu.Items.Add(_fullTunnelTrayMenuItem);
             contextMenu.Items.Add(new ToolStripSeparator());
             contextMenu.Items.Add("Exit", null, (s, e) => ExitApplication());
 
@@ -121,7 +131,7 @@ namespace WireFox.Views
                         break;
 
                     case TunnelStatus.Bypassed:
-                        targetIcon = _greenIcon ?? _defaultIcon;
+                        targetIcon = _defaultIcon; // Signature Teal Shield for Trusted Network
                         string networkName = !string.IsNullOrEmpty(netState.Ssid) ? netState.Ssid : "Trusted LAN";
                         statusSummary = $"Trusted ({networkName})";
                         break;
@@ -161,18 +171,23 @@ namespace WireFox.Views
                     default:
                         if (netState.IsConnected && !netState.IsTrusted)
                         {
-                            targetIcon = _redIcon ?? _defaultIcon;
+                            targetIcon = _redIcon ?? _defaultIcon; // Problem: Untrusted public Wi-Fi with tunnel down!
                             string untrustedNet = !string.IsNullOrEmpty(netState.Ssid) ? netState.Ssid : "Public Network";
                             statusSummary = $"Unprotected ({untrustedNet})";
                         }
                         else if (WatchdogService.Instance.IsManuallyDisabled)
                         {
-                            targetIcon = _redIcon ?? _defaultIcon;
+                            targetIcon = _grayIcon ?? _defaultIcon; // Colorless: Manually disabled by user
                             statusSummary = "Disabled";
+                        }
+                        else if (!netState.IsConnected)
+                        {
+                            targetIcon = _grayIcon ?? _defaultIcon; // Colorless: Offline / Airplane Mode
+                            statusSummary = "Offline";
                         }
                         else
                         {
-                            targetIcon = _defaultIcon;
+                            targetIcon = _grayIcon ?? _defaultIcon; // Colorless: Inactive
                             statusSummary = "Disconnected";
                         }
                         break;
@@ -185,12 +200,87 @@ namespace WireFox.Views
                     tooltip = tooltip.Substring(0, 60) + "...";
                 }
 
-                _trayIcon.Icon = targetIcon;
+                if (!ReferenceEquals(_trayIcon.Icon, targetIcon))
+                {
+                    _trayIcon.Icon = targetIcon;
+                }
                 _trayIcon.Text = tooltip;
+
+                if (_pauseTrayMenuItem != null)
+                {
+                    if (status == TunnelStatus.Paused)
+                    {
+                        _pauseTrayMenuItem.Text = "Resume VPN (Unpause)";
+                        _pauseTrayMenuItem.Enabled = true;
+                    }
+                    else if (status == TunnelStatus.Connected || status == TunnelStatus.SplitTunnel)
+                    {
+                        _pauseTrayMenuItem.Text = "Pause VPN (15 Mins)";
+                        _pauseTrayMenuItem.Enabled = true;
+                    }
+                    else
+                    {
+                        _pauseTrayMenuItem.Text = "Pause VPN (15 Mins)";
+                        _pauseTrayMenuItem.Enabled = false;
+                    }
+                }
+
+                var config = ConfigManager.Instance.Config;
+                string effInterface = !string.IsNullOrEmpty(config.WireGuardInterface) ? config.WireGuardInterface : "wg0";
+                var profile = config.GetProfile(effInterface);
+                bool hasSplitTunnel = !string.IsNullOrWhiteSpace(profile.SplitTunnelAllowedIPs);
+
+                if (_splitTunnelTrayMenuItem != null)
+                {
+                    _splitTunnelTrayMenuItem.Enabled = hasSplitTunnel && status == TunnelStatus.Connected;
+                }
+
+                if (_fullTunnelTrayMenuItem != null)
+                {
+                    if (status == TunnelStatus.SplitTunnel)
+                    {
+                        _fullTunnelTrayMenuItem.Text = "Restore Full Tunnel";
+                        _fullTunnelTrayMenuItem.Enabled = true;
+                    }
+                    else if (status == TunnelStatus.Connected)
+                    {
+                        _fullTunnelTrayMenuItem.Text = "Restart Tunnel";
+                        _fullTunnelTrayMenuItem.Enabled = true;
+                    }
+                    else
+                    {
+                        _fullTunnelTrayMenuItem.Text = "Restart Tunnel";
+                        _fullTunnelTrayMenuItem.Enabled = false;
+                    }
+                }
             }
             catch (Exception ex)
             {
                 LoggingService.Instance.Debug("MainWindow", $"Failed to update tray visuals: {ex.Message}");
+            }
+        }
+
+        private async Task OnTrayPauseToggleClicked()
+        {
+            if (WatchdogService.Instance.Status == TunnelStatus.Paused)
+            {
+                await WatchdogService.Instance.RevertToFullTunnelAsync();
+            }
+            else
+            {
+                await WatchdogService.Instance.PauseTunnelAsync(TimeSpan.FromMinutes(15));
+            }
+        }
+
+        private async Task OnTrayFullTunnelActionClicked()
+        {
+            if (WatchdogService.Instance.Status == TunnelStatus.SplitTunnel)
+            {
+                await WatchdogService.Instance.RevertToFullTunnelAsync();
+            }
+            else
+            {
+                await WatchdogService.Instance.RestartTunnelAsync();
             }
         }
 
@@ -199,8 +289,9 @@ namespace WireFox.Views
             try
             {
                 var asm = typeof(MainWindow).Assembly;
-                // Assembly embedded resource name format: WireFox.<filename>
-                using var resStream = asm.GetManifestResourceStream($"WireFox.{iconName}");
+                // Assembly embedded resource name format: WireFox.Assets.<filename> or WireFox.<filename>
+                using var resStream = asm.GetManifestResourceStream($"WireFox.Assets.{iconName}")
+                                   ?? asm.GetManifestResourceStream($"WireFox.{iconName}");
                 if (resStream != null)
                 {
                     return new System.Drawing.Icon(resStream);
@@ -210,12 +301,18 @@ namespace WireFox.Views
 
             try
             {
+                string assetsPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Assets", iconName);
+                if (File.Exists(assetsPath)) return new System.Drawing.Icon(assetsPath);
+
                 string iconPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, iconName);
                 if (File.Exists(iconPath)) return new System.Drawing.Icon(iconPath);
 
                 string? exeDir = Path.GetDirectoryName(Environment.ProcessPath);
                 if (!string.IsNullOrEmpty(exeDir))
                 {
+                    string candidateAssets = Path.Combine(exeDir, "Assets", iconName);
+                    if (File.Exists(candidateAssets)) return new System.Drawing.Icon(candidateAssets);
+
                     string candidate = Path.Combine(exeDir, iconName);
                     if (File.Exists(candidate)) return new System.Drawing.Icon(candidate);
                 }
@@ -223,42 +320,6 @@ namespace WireFox.Views
             catch { }
             return null;
         }
-
-        private System.Drawing.Icon CreateStatusIcon(System.Drawing.Icon baseIcon, System.Drawing.Color statusColor)
-        {
-            try
-            {
-                var bmp = baseIcon.ToBitmap();
-                using (var g = System.Drawing.Graphics.FromImage(bmp))
-                {
-                    g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
-                    
-                    // Draw a colored badge in the bottom right corner
-                    int badgeSize = (int)(bmp.Width * 0.45);
-                    int x = bmp.Width - badgeSize - 1;
-                    int y = bmp.Height - badgeSize - 1;
-
-                    using var brush = new System.Drawing.SolidBrush(statusColor);
-                    using var pen = new System.Drawing.Pen(System.Drawing.Color.White, Math.Max(1, bmp.Width / 16));
-
-                    g.FillEllipse(brush, x, y, badgeSize, badgeSize);
-                    g.DrawEllipse(pen, x, y, badgeSize, badgeSize);
-                }
-
-                IntPtr hIcon = bmp.GetHicon();
-                var newIcon = (System.Drawing.Icon)System.Drawing.Icon.FromHandle(hIcon).Clone();
-                DestroyIcon(hIcon);
-                return newIcon;
-            }
-            catch (Exception ex)
-            {
-                LoggingService.Instance.Debug("MainWindow", $"Failed to generate status icon: {ex.Message}");
-                return baseIcon;
-            }
-        }
-
-        [System.Runtime.InteropServices.DllImport("user32.dll", CharSet = System.Runtime.InteropServices.CharSet.Auto)]
-        extern static bool DestroyIcon(IntPtr handle);
 
         private static System.Drawing.Icon? LoadAppIcon()
         {

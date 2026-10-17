@@ -24,7 +24,12 @@
             <ui:CardControl Padding="20" Margin="0,0,0,16">
                 <ui:CardControl.Header>
                     <StackPanel Orientation="Horizontal" Margin="0,0,16,0">
-                        <ui:SymbolIcon Symbol="{Binding StatusSymbol}" FontSize="34" Margin="0,0,16,0" VerticalAlignment="Center" />
+                        <Image Source="{Binding StatusImage}" 
+                               Width="54" 
+                               Height="54" 
+                               Margin="0,0,18,0" 
+                               VerticalAlignment="Center"
+                               RenderOptions.BitmapScalingMode="HighQuality" />
                         <StackPanel VerticalAlignment="Center">
                             <ui:TextBlock Text="Tunnel State" FontSize="12" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
                             <ui:TextBlock Text="{Binding StatusText}" FontSize="18" FontWeight="SemiBold" />
@@ -204,21 +209,27 @@
             
             <UniformGrid Columns="3">
                 <ui:Button Margin="0,0,6,0" HorizontalAlignment="Stretch"
-                           Appearance="Secondary"
-                           Content="Pause 15 Mins"
+                           Appearance="{Binding PauseButtonAppearance}"
+                           Content="{Binding PauseButtonText}"
+                           ToolTip="{Binding PauseButtonToolTip}"
+                           ToolTipService.ShowOnDisabled="True"
                            MinHeight="42"
                            Padding="8,8"
-                           Command="{Binding Pause15Command}">
+                           IsEnabled="{Binding CanPauseAction}"
+                           Command="{Binding PauseToggleCommand}">
                     <ui:Button.Icon>
-                        <ui:SymbolIcon Symbol="Pause24" />
+                        <ui:SymbolIcon Symbol="{Binding PauseButtonSymbol}" />
                     </ui:Button.Icon>
                 </ui:Button>
 
                 <ui:Button Margin="3,0,3,0" HorizontalAlignment="Stretch"
                            Appearance="Secondary"
-                           Content="Split-Tunnel"
+                           Content="{Binding SplitTunnelButtonText}"
+                           ToolTip="{Binding SplitTunnelToolTip}"
+                           ToolTipService.ShowOnDisabled="True"
                            MinHeight="42"
                            Padding="8,8"
+                           IsEnabled="{Binding CanSplitTunnel}"
                            Command="{Binding SplitTunnel15Command}">
                     <ui:Button.Icon>
                         <ui:SymbolIcon Symbol="ArrowSwap24" />
@@ -226,13 +237,16 @@
                 </ui:Button>
 
                 <ui:Button Margin="6,0,0,0" HorizontalAlignment="Stretch"
-                           Appearance="Secondary"
-                           Content="Full Tunnel"
+                           Appearance="{Binding FullTunnelButtonAppearance}"
+                           Content="{Binding FullTunnelButtonText}"
+                           ToolTip="{Binding FullTunnelToolTip}"
+                           ToolTipService.ShowOnDisabled="True"
                            MinHeight="42"
                            Padding="8,8"
-                           Command="{Binding RevertFullCommand}">
+                           IsEnabled="{Binding CanFullTunnelAction}"
+                           Command="{Binding FullTunnelActionCommand}">
                     <ui:Button.Icon>
-                        <ui:SymbolIcon Symbol="ArrowCounterclockwise24" />
+                        <ui:SymbolIcon Symbol="{Binding FullTunnelButtonSymbol}" />
                     </ui:Button.Icon>
                 </ui:Button>
             </UniformGrid>

@@ -65,7 +65,6 @@ $esc[0m $esc[0m $esc[0m $esc[0m $esc[0m $esc[0m $esc[0m $esc[38;2;4;12;22m$esc[4
 $esc[0m $esc[0m $esc[0m $esc[0m $esc[0m $esc[0m $esc[0m $esc[0m $esc[0m $esc[38;2;1;1;2m$esc[49m$u$esc[38;2;11;26;45m$esc[48;2;0;0;0m$u$esc[38;2;23;50;97m$esc[48;2;4;11;17m$u$esc[38;2;26;76;127m$esc[48;2;16;32;59m$u$esc[38;2;55;61;83m$esc[48;2;11;42;87m$u$esc[38;2;30;94;118m$esc[48;2;92;127;154m$u$esc[38;2;30;95;118m$esc[48;2;93;127;154m$u$esc[38;2;55;61;83m$esc[48;2;12;42;87m$u$esc[38;2;27;76;127m$esc[48;2;16;32;59m$u$esc[38;2;24;49;95m$esc[48;2;4;10;17m$u$esc[38;2;11;25;44m$esc[48;2;0;0;0m$u$esc[38;2;1;2;3m$esc[49m$u$esc[0m $esc[0m $esc[0m $esc[0m $esc[0m $esc[0m $esc[0m $esc[0m $esc[0m $esc[0m   
 $esc[0m $esc[0m $esc[0m $esc[0m $esc[0m $esc[0m $esc[0m $esc[0m $esc[0m $esc[0m $esc[0m $esc[0m $esc[38;2;1;0;0m$esc[49m$u$esc[38;2;0;4;8m$esc[49m$u$esc[38;2;68;77;95m$esc[48;2;0;0;1m$u$esc[38;2;68;78;95m$esc[48;2;0;1;1m$u$esc[38;2;0;4;8m$esc[49m$u$esc[38;2;1;0;0m$esc[49m$u$esc[0m $esc[0m $esc[0m $esc[0m $esc[0m $esc[0m $esc[0m $esc[0m $esc[0m $esc[0m $esc[0m $esc[0m $esc[0m   
 "@
-$banner = $banner.Replace("$esc[49m", "$esc[48;2;0;0;0m")
 Write-Host $banner
 
 # 1. Administrator Elevation Check

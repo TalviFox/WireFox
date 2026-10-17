@@ -249,8 +249,7 @@ function initFaqAccordion() {
 /* -------------------------------------------------------------------------- */
 async function fetchLatestReleaseInfo() {
   const versionBadges = document.querySelectorAll('.release-version-tag');
-  const downloadLinks = document.querySelectorAll('#hero-download-btn, #nav-download-btn, #footer-cta-download, #mobile-download-btn, a[href*="releases/"]');
-  const BASELINE_VERSION = 'v1.0.6';
+  const downloadLinks = document.querySelectorAll('#hero-download-btn, #nav-download-btn, #cta-download-btn, #mobile-download-btn, a[href*="releases/latest"]');
 
   try {
     const res = await fetch('https://api.github.com/repos/TalviFox/WireFox/releases/latest');
@@ -258,37 +257,19 @@ async function fetchLatestReleaseInfo() {
 
     const data = await res.json();
     if (data && data.tag_name) {
-      const version = data.tag_name;
+      const version = data.tag_name; // e.g. "v1.0.5"
 
-      // Helper to compare semver-like strings
-      const parseSemver = (str) => (str || '').replace(/^v/, '').split('.').map(n => parseInt(n, 10) || 0);
-      const isGreaterOrEqual = (a, b) => {
-        const pa = parseSemver(a);
-        const pb = parseSemver(b);
-        for (let i = 0; i < Math.max(pa.length, pb.length); i++) {
-          const numA = pa[i] || 0;
-          const numB = pb[i] || 0;
-          if (numA > numB) return true;
-          if (numA < numB) return false;
-        }
-        return true;
-      };
+      versionBadges.forEach(badge => {
+        badge.textContent = version;
+      });
 
-      // Only update version badge & asset link if the release is at least v1.0.6
-      // (prevents overwriting with v1.0.5 while 1.0.6 is being uploaded/staged)
-      if (isGreaterOrEqual(version, BASELINE_VERSION)) {
-        versionBadges.forEach(badge => {
-          badge.textContent = version;
-        });
-
-        // Point download links to the Windows .exe asset if uploaded to release
-        if (data.assets && data.assets.length > 0) {
-          const exeAsset = data.assets.find(a => a.name && a.name.toLowerCase().endsWith('.exe'));
-          if (exeAsset && exeAsset.browser_download_url) {
-            downloadLinks.forEach(link => {
-              link.href = exeAsset.browser_download_url;
-            });
-          }
+      // Point download links to the Windows .exe asset if uploaded to release
+      if (data.assets && data.assets.length > 0) {
+        const exeAsset = data.assets.find(a => a.name && a.name.toLowerCase().endsWith('.exe'));
+        if (exeAsset && exeAsset.browser_download_url) {
+          downloadLinks.forEach(link => {
+            link.href = exeAsset.browser_download_url;
+          });
         }
       }
     }

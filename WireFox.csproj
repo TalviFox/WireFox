@@ -7,7 +7,7 @@
     <UseWPF>true</UseWPF>
     <UseWindowsForms>true</UseWindowsForms>
     <ApplicationManifest>app.manifest</ApplicationManifest>
-    <ApplicationIcon>wirefox.ico</ApplicationIcon>
+    <ApplicationIcon>Assets\wirefox.ico</ApplicationIcon>
     <AssemblyName>WireFox</AssemblyName>
     <RootNamespace>WireFox</RootNamespace>
     <Product>WireFox</Product>
@@ -15,9 +15,9 @@
     <Authors>FoxDen Software</Authors>
     <Description>Automated roaming and trusted network watchdog for WireGuard on Windows</Description>
     <Copyright>Copyright (c) 2026 FoxDen Software</Copyright>
-    <Version>1.0.6</Version>
-    <FileVersion>1.0.6</FileVersion>
-    <AssemblyVersion>1.0.6</AssemblyVersion>
+    <Version>1.0.7</Version>
+    <FileVersion>1.0.7</FileVersion>
+    <AssemblyVersion>1.0.7</AssemblyVersion>
     <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
     <IncludeAllContentForSelfExtract>true</IncludeAllContentForSelfExtract>
     <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
@@ -25,16 +25,22 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Content Include="wirefox.ico">
+    <Content Include="Assets\*.ico">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-    <Content Include="wirefox_icon.png">
+    <Content Include="Assets\*.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
   </ItemGroup>
 
   <ItemGroup>
-    <EmbeddedResource Include="wirefox.ico" />
+    <EmbeddedResource Include="Assets\wirefox.ico" />
+    <EmbeddedResource Include="Assets\wirefox_green.ico" />
+    <EmbeddedResource Include="Assets\wirefox_orange.ico" />
+    <EmbeddedResource Include="Assets\wirefox_red.ico" />
+    <EmbeddedResource Include="Assets\wirefox_gray.ico" />
+    <EmbeddedResource Include="Assets\wirefox_purple.ico" />
+    <Resource Include="Assets\wirefox_icon.png" />
   </ItemGroup>
 
   <ItemGroup>
@@ -49,6 +55,17 @@
     <None Remove="1.0.5-Reference\**" />
   </ItemGroup>
 </Project>
+
+
+
+
+
+
+
+
+
+
+
 
 
 

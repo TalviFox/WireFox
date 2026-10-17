@@ -31,6 +31,7 @@ namespace WireFox.Services
         private bool _isStarted;
         private int _consecutiveFailures = 0;
         private readonly List<DateTime> _restartTimestamps = new();
+        private readonly SemaphoreSlim _networkSettledLock = new(1, 1);
         private long _lastTxBytes = 0;
         private long _lastRxBytes = 0;
 
@@ -92,109 +93,126 @@ namespace WireFox.Services
 
         private async void OnNetworkSettled(NetworkState state)
         {
-            var config = ConfigManager.Instance.Config;
-            var cli = WireGuardCliService.Instance;
-
-            if (!cli.IsInstalled)
+            await _networkSettledLock.WaitAsync();
+            try
             {
-                SetStatus(TunnelStatus.Disconnected);
-                return;
-            }
+                var config = ConfigManager.Instance.Config;
+                var cli = WireGuardCliService.Instance;
 
-            string targetInterface = GetEffectiveInterfaceName(config);
-            bool isRunning = cli.IsTunnelServiceRunning(targetInterface);
-
-            LoggingService.Instance.Info("WatchdogService", 
-                $"Network settled: IsTrusted={state.IsTrusted}, Interface='{targetInterface}', IsRunning={isRunning}, ManuallyDisabled={_isManuallyDisabled}");
-
-            // 1. If connected to a Trusted network -> Bypass VPN
-            if (state.IsTrusted)
-            {
-                _sessionExpiresUtc = null;
-
-                // Guard: If already bypassed and no tunnel is active, avoid teardown churn
-                if (_status == TunnelStatus.Bypassed && !isRunning)
+                if (!cli.IsInstalled)
                 {
-                    LoggingService.Instance.Debug("WatchdogService", "Network settled on trusted network: tunnel already bypassed and inactive.");
+                    SetStatus(TunnelStatus.Disconnected);
                     return;
                 }
 
-                // If no tunnel is running, transition status directly without executing process teardowns
-                if (!isRunning)
+                string targetInterface = GetEffectiveInterfaceName(config);
+                bool isRunning = cli.IsTunnelServiceRunning(targetInterface);
+
+                LoggingService.Instance.Info("WatchdogService", 
+                    $"Network settled: IsTrusted={state.IsTrusted}, Interface='{targetInterface}', IsRunning={isRunning}, ManuallyDisabled={_isManuallyDisabled}");
+
+                // 1. If connected to a Trusted network -> Bypass VPN
+                if (state.IsTrusted)
                 {
-                    LoggingService.Instance.Info("WatchdogService", "Trusted network active: no tunnels running, setting status to Bypassed.");
+                    _sessionExpiresUtc = null;
+
+                    // Guard: If already bypassed and no tunnel is active, avoid teardown churn
+                    if (_status == TunnelStatus.Bypassed && !isRunning)
+                    {
+                        LoggingService.Instance.Debug("WatchdogService", "Network settled on trusted network: tunnel already bypassed and inactive.");
+                        return;
+                    }
+
+                    // If no tunnel is running, transition status directly without executing process teardowns
+                    if (!isRunning)
+                    {
+                        LoggingService.Instance.Info("WatchdogService", "Trusted network active: no tunnels running, setting status to Bypassed.");
+                        SetStatus(TunnelStatus.Bypassed);
+                        return;
+                    }
+
+                    LoggingService.Instance.Info("WatchdogService", $"Trusted network active: stopping active tunnel '{targetInterface}' gracefully...");
+                    await cli.StopTunnelAsync(targetInterface);
                     SetStatus(TunnelStatus.Bypassed);
                     return;
                 }
 
-                LoggingService.Instance.Info("WatchdogService", $"Trusted network active: stopping active tunnel '{targetInterface}' gracefully...");
-                await cli.StopTunnelAsync(targetInterface);
-                SetStatus(TunnelStatus.Bypassed);
-                return;
-            }
-
-            // 2. If untrusted wireless network and new -> Prompt user with accurate state
-            if (state.IsWireless && !string.IsNullOrEmpty(state.Ssid))
-            {
-                if (!config.KnownUntrustedNetworks.Contains(state.Ssid, StringComparer.OrdinalIgnoreCase) &&
-                    !config.TrustedNetworks.Contains(state.Ssid, StringComparer.OrdinalIgnoreCase))
+                // 2. If untrusted wireless network and new -> Prompt user with accurate state
+                if (state.IsWireless && !string.IsNullOrEmpty(state.Ssid))
                 {
-                    NotificationService.Instance.ShowNewNetworkPrompt(state.Ssid, isRunning);
+                    if (!config.KnownUntrustedNetworks.Contains(state.Ssid, StringComparer.OrdinalIgnoreCase) &&
+                        !config.TrustedNetworks.Contains(state.Ssid, StringComparer.OrdinalIgnoreCase))
+                    {
+                        NotificationService.Instance.ShowNewNetworkPrompt(state.Ssid, isRunning);
+                    }
                 }
-            }
 
-            var profile = config.GetProfile(targetInterface);
+                var profile = config.GetProfile(targetInterface);
 
-            // 3. If currently in a paused or split session, maintain session
-            if (_status == TunnelStatus.Paused && _sessionExpiresUtc > DateTime.UtcNow)
-            {
-                return;
-            }
-
-            if (_status == TunnelStatus.SplitTunnel && _sessionExpiresUtc > DateTime.UtcNow)
-            {
-                await cli.SetSplitTunnelAllowedIpsAsync(targetInterface, profile.SplitTunnelAllowedIPs);
-                return;
-            }
-
-            // 4. If user manually turned OFF the tunnel, respect their choice
-            if (_isManuallyDisabled)
-            {
-                LoggingService.Instance.Info("WatchdogService", "Tunnel is manually disabled by user; skipping auto-start.");
-                SetStatus(TunnelStatus.Disconnected);
-                return;
-            }
-
-            // 5. Otherwise, ensure tunnel is active on untrusted network
-            if (!isRunning)
-            {
-                SetStatus(TunnelStatus.Connecting);
-                _tunnelStartedUtc = DateTime.UtcNow;
-                _blockedWarningSent = false;
-                bool started = await cli.StartTunnelAsync(targetInterface, profile.WireGuardConfigPath);
-                if (!started)
+                // 3. If currently in a paused or split session, maintain session
+                if (_status == TunnelStatus.Paused && _sessionExpiresUtc > DateTime.UtcNow)
                 {
-                    LoggingService.Instance.Warning("WatchdogService", $"Automatic tunnel start failed for '{targetInterface}'");
+                    return;
                 }
-            }
-            else
-            {
-                // If tunnel service is running but handshake is stale after wake/reconnect, refresh it gracefully
-                var latestHandshake = await cli.GetLatestHandshakeUtcAsync(targetInterface);
-                if (latestHandshake.HasValue && (DateTime.UtcNow - latestHandshake.Value).TotalSeconds > profile.HandshakeTimeoutSeconds)
+
+                if (_status == TunnelStatus.SplitTunnel && _sessionExpiresUtc > DateTime.UtcNow)
                 {
-                    LoggingService.Instance.Warning("WatchdogService", 
-                        $"Network settled on untrusted network but running tunnel '{targetInterface}' has stale handshake. Refreshing tunnel connection...");
-                    await cli.StopTunnelAsync(targetInterface);
+                    await cli.SetSplitTunnelAllowedIpsAsync(targetInterface, profile.SplitTunnelAllowedIPs);
+                    return;
+                }
+
+                // 4. If user manually turned OFF the tunnel, respect their choice
+                if (_isManuallyDisabled)
+                {
+                    LoggingService.Instance.Info("WatchdogService", "Tunnel is manually disabled by user; skipping auto-start.");
+                    SetStatus(TunnelStatus.Disconnected);
+                    return;
+                }
+
+                // 5. Guard against unready physical networks on untrusted networks:
+                // WireGuard 1.1 requires a functioning default gateway to perform endpoint DNS resolution.
+                if (string.IsNullOrEmpty(state.GatewayIp))
+                {
+                    LoggingService.Instance.Info("WatchdogService", 
+                        $"Untrusted network '{state.ConnectionType}' has no default gateway assigned yet. Deferring tunnel start until network config settles.");
+                    return;
+                }
+
+                // 6. Otherwise, ensure tunnel is active on untrusted network
+                if (!isRunning)
+                {
+                    SetStatus(TunnelStatus.Connecting);
                     _tunnelStartedUtc = DateTime.UtcNow;
-                    _consecutiveFailures = 0;
                     _blockedWarningSent = false;
-                    await cli.StartTunnelAsync(targetInterface, profile.WireGuardConfigPath);
+                    bool started = await cli.StartTunnelAsync(targetInterface, profile.WireGuardConfigPath);
+                    if (!started)
+                    {
+                        LoggingService.Instance.Warning("WatchdogService", $"Automatic tunnel start failed for '{targetInterface}'");
+                    }
                 }
-            }
+                else
+                {
+                    // If tunnel service is running but handshake is stale after wake/reconnect, refresh it gracefully
+                    var latestHandshake = await cli.GetLatestHandshakeUtcAsync(targetInterface);
+                    if (latestHandshake.HasValue && (DateTime.UtcNow - latestHandshake.Value).TotalSeconds > profile.HandshakeTimeoutSeconds)
+                    {
+                        LoggingService.Instance.Warning("WatchdogService", 
+                            $"Network settled on untrusted network but running tunnel '{targetInterface}' has stale handshake. Refreshing tunnel connection...");
+                        await cli.StopTunnelAsync(targetInterface);
+                        _tunnelStartedUtc = DateTime.UtcNow;
+                        _consecutiveFailures = 0;
+                        _blockedWarningSent = false;
+                        await cli.StartTunnelAsync(targetInterface, profile.WireGuardConfigPath);
+                    }
+                }
 
-            await Task.Delay(2000);
-            await RefreshStatusAsync();
+                await Task.Delay(2000);
+                await RefreshStatusAsync();
+            }
+            finally
+            {
+                _networkSettledLock.Release();
+            }
         }
 
         private async Task OnPeriodicCheckAsync()

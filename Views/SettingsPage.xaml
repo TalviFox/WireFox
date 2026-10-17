@@ -472,7 +472,7 @@
                         </Grid.ColumnDefinitions>
 
                         <Border Width="48" Height="48" CornerRadius="8" Margin="0,0,16,0" VerticalAlignment="Center" Background="{DynamicResource ControlFillColorDefaultBrush}">
-                            <Image Source="/wirefox_icon.png" Width="40" Height="40" RenderOptions.BitmapScalingMode="HighQuality" />
+                            <Image Source="/Assets/wirefox_icon.png" Width="40" Height="40" RenderOptions.BitmapScalingMode="HighQuality" />
                         </Border>
 
                         <StackPanel Grid.Column="1" VerticalAlignment="Center">

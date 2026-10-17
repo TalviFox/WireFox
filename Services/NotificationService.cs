@@ -144,6 +144,7 @@ namespace WireFox.Services
 
             try
             {
+                string resumeLabel = sessionType.Contains("Pause", StringComparison.OrdinalIgnoreCase) ? "Unpause Now" : "Revert to Full Tunnel";
                 new ToastContentBuilder()
                     .AddText($"VPN {sessionType} Expiring Soon")
                     .AddText($"Full tunnel will re-enable in {minutesRemaining} minutes.")
@@ -153,7 +154,7 @@ namespace WireFox.Services
                         .AddArgument("param", "15")
                         .SetBackgroundActivation())
                     .AddButton(new ToastButton()
-                        .SetContent("Revert to Full Tunnel")
+                        .SetContent(resumeLabel)
                         .AddArgument("action", "revert_full").AddArgument("param", "1")
                         .SetBackgroundActivation())
                     .Show(toast =>

@@ -54,6 +54,7 @@ namespace WireFox.Services
 
         private string? _wireguardExePath;
         private string? _wgExePath;
+        private readonly System.Threading.SemaphoreSlim _tunnelOperationLock = new(1, 1);
 
         [DllImport("dnsapi.dll", EntryPoint = "DnsFlushResolverCache")]
         private static extern int DnsFlushResolverCache();
@@ -512,12 +513,25 @@ namespace WireFox.Services
                 {
                     return true;
                 }
+                if (sc.Status == ServiceControllerStatus.Stopped || sc.Status == ServiceControllerStatus.StopPending)
+                {
+                    return false;
+                }
             }
             catch { }
 
-            // Check active kernel interface fallback
-            var activeInterfaces = GetActiveInterfaceNames();
-            return activeInterfaces.Contains(interfaceName, StringComparer.OrdinalIgnoreCase);
+            // Check active kernel interface fallback only if SCM check failed/unavailable
+            try
+            {
+                var interfaces = NetworkInterface.GetAllNetworkInterfaces();
+                return interfaces.Any(ni =>
+                    ni.OperationalStatus == OperationalStatus.Up &&
+                    string.Equals(ni.Name, interfaceName, StringComparison.OrdinalIgnoreCase));
+            }
+            catch
+            {
+                return false;
+            }
         }
 
         public async Task<bool> StartTunnelAsync(string interfaceName, string? configPath = null)
@@ -528,226 +542,294 @@ namespace WireFox.Services
                 return false;
             }
 
-            return await Task.Run(() =>
+            await _tunnelOperationLock.WaitAsync();
+            try
             {
-                try
+                return await Task.Run(() =>
                 {
-                    string serviceName = GetServiceName(interfaceName);
-                    LoggingService.Instance.Info("WireGuardCli", $"Attempting to start tunnel '{interfaceName}' (Service: {serviceName})...");
-                    
-                    // 1. Check if service already exists
                     try
                     {
-                        var services = ServiceController.GetServices();
-                        var existingService = services.FirstOrDefault(s => string.Equals(s.ServiceName, serviceName, StringComparison.OrdinalIgnoreCase));
+                        string serviceName = GetServiceName(interfaceName);
+                        LoggingService.Instance.Info("WireGuardCli", $"Attempting to start tunnel '{interfaceName}' (Service: {serviceName})...");
+                        
+                        // 1. Check if service already exists
+                        ServiceController? existingService = null;
+                        try
+                        {
+                            var services = ServiceController.GetServices();
+                            existingService = services.FirstOrDefault(s => string.Equals(s.ServiceName, serviceName, StringComparison.OrdinalIgnoreCase));
+                        }
+                        catch (Exception ex)
+                        {
+                            LoggingService.Instance.Debug("WireGuardCli", $"Service enumeration failed: {ex.Message}");
+                        }
 
                         if (existingService != null)
                         {
-                            if (existingService.Status == ServiceControllerStatus.Running)
+                            using (existingService)
                             {
-                                LoggingService.Instance.Info("WireGuardCli", $"Tunnel service '{serviceName}' is already running.");
-                                return true;
+                                if (existingService.Status == ServiceControllerStatus.Running)
+                                {
+                                    LoggingService.Instance.Info("WireGuardCli", $"Tunnel service '{serviceName}' is already running.");
+                                    return true;
+                                }
+
+                                if (existingService.Status == ServiceControllerStatus.StartPending)
+                                {
+                                    LoggingService.Instance.Info("WireGuardCli", $"Tunnel service '{serviceName}' is already in StartPending state. Waiting up to 8s...");
+                                    try
+                                    {
+                                        existingService.WaitForStatus(ServiceControllerStatus.Running, TimeSpan.FromSeconds(8));
+                                        LoggingService.Instance.Success("WireGuardCli", $"Tunnel service '{serviceName}' reached Running state.");
+                                        return true;
+                                    }
+                                    catch (Exception ex)
+                                    {
+                                        LoggingService.Instance.Warning("WireGuardCli", $"Wait for StartPending timed out ({ex.Message}).");
+                                        return existingService.Status == ServiceControllerStatus.Running;
+                                    }
+                                }
+
+                                if (existingService.Status == ServiceControllerStatus.StopPending)
+                                {
+                                    LoggingService.Instance.Info("WireGuardCli", $"Tunnel service '{serviceName}' is in StopPending state. Waiting up to 8s for stop to complete before starting...");
+                                    try
+                                    {
+                                        existingService.WaitForStatus(ServiceControllerStatus.Stopped, TimeSpan.FromSeconds(8));
+                                    }
+                                    catch (Exception ex)
+                                    {
+                                        LoggingService.Instance.Warning("WireGuardCli", $"Wait for StopPending timed out ({ex.Message}).");
+                                    }
+                                }
+
+                                try
+                                {
+                                    existingService.Refresh();
+                                    if (existingService.Status == ServiceControllerStatus.Stopped)
+                                    {
+                                        LoggingService.Instance.Info("WireGuardCli", $"Starting existing service '{serviceName}'...");
+                                        existingService.Start();
+                                        existingService.WaitForStatus(ServiceControllerStatus.Running, TimeSpan.FromSeconds(8));
+                                        LoggingService.Instance.Success("WireGuardCli", $"Tunnel service '{serviceName}' started successfully.");
+                                        return true;
+                                    }
+                                    else if (existingService.Status == ServiceControllerStatus.Running)
+                                    {
+                                        return true;
+                                    }
+                                    else
+                                    {
+                                        LoggingService.Instance.Warning("WireGuardCli", $"Existing service '{serviceName}' could not be started (Current status: {existingService.Status}).");
+                                        return false;
+                                    }
+                                }
+                                catch (Exception ex)
+                                {
+                                    LoggingService.Instance.Warning("WireGuardCli", $"Existing service start attempt failed: {ex.Message}");
+                                    // Service already exists in SCM; do NOT fall through to /installtunnelservice
+                                    return false;
+                                }
                             }
-                            
-                            if (existingService.Status == ServiceControllerStatus.Stopped)
+                        }
+
+                        // 2. Service does not exist yet; find configuration file to install it
+                        if (!string.IsNullOrEmpty(_wireguardExePath))
+                        {
+                            string? targetConfig = ResolveConfigPath(interfaceName, configPath);
+
+                            if (string.IsNullOrEmpty(targetConfig) || !File.Exists(targetConfig))
                             {
-                                LoggingService.Instance.Info("WireGuardCli", $"Starting existing service '{serviceName}'...");
-                                existingService.Start();
-                                existingService.WaitForStatus(ServiceControllerStatus.Running, TimeSpan.FromSeconds(5));
-                                LoggingService.Instance.Success("WireGuardCli", $"Tunnel service '{serviceName}' started successfully.");
-                                return true;
+                                LoggingService.Instance.Error("WireGuardCli", 
+                                    $"No configuration (.conf) file found for '{interfaceName}'. Please select a valid config in Settings.");
+                                return false;
                             }
+
+                            LoggingService.Instance.Info("WireGuardCli", 
+                                $"Installing tunnel service using '{targetConfig}'...");
+
+                            var psi = new ProcessStartInfo
+                            {
+                                FileName = _wireguardExePath,
+                                Arguments = $"/installtunnelservice \"{targetConfig}\"",
+                                UseShellExecute = false,
+                                CreateNoWindow = true
+                            };
+                            using var proc = Process.Start(psi);
+                            proc?.WaitForExit(8000);
+
+                            bool running = IsTunnelServiceRunning(interfaceName);
+                            if (running)
+                            {
+                                LoggingService.Instance.Success("WireGuardCli", $"Tunnel '{interfaceName}' installed and running.");
+                            }
+                            else
+                            {
+                                LoggingService.Instance.Warning("WireGuardCli", $"Install completed but service is not running for '{interfaceName}'.");
+                            }
+                            return running;
                         }
                     }
                     catch (Exception ex)
                     {
-                        LoggingService.Instance.Warning("WireGuardCli", $"Existing service start attempt failed: {ex.Message}");
+                        LoggingService.Instance.Error("WireGuardCli", $"StartTunnel failed for '{interfaceName}'", ex);
                     }
-
-                    // 2. Service does not exist yet; find configuration file to install it
-                    if (!string.IsNullOrEmpty(_wireguardExePath))
-                    {
-                        string? targetConfig = ResolveConfigPath(interfaceName, configPath);
-
-                        if (string.IsNullOrEmpty(targetConfig) || !File.Exists(targetConfig))
-                        {
-                            LoggingService.Instance.Error("WireGuardCli", 
-                                $"No configuration (.conf) file found for '{interfaceName}'. Please select a valid config in Settings.");
-                            return false;
-                        }
-
-                        LoggingService.Instance.Info("WireGuardCli", 
-                            $"Installing tunnel service using '{targetConfig}'...");
-
-                        var psi = new ProcessStartInfo
-                        {
-                            FileName = _wireguardExePath,
-                            Arguments = $"/installtunnelservice \"{targetConfig}\"",
-                            UseShellExecute = false,
-                            CreateNoWindow = true
-                        };
-                        using var proc = Process.Start(psi);
-                        proc?.WaitForExit(5000);
-
-                        bool running = IsTunnelServiceRunning(interfaceName);
-                        if (running)
-                        {
-                            LoggingService.Instance.Success("WireGuardCli", $"Tunnel '{interfaceName}' installed and running.");
-                        }
-                        else
-                        {
-                            LoggingService.Instance.Warning("WireGuardCli", $"Install completed but service is not running for '{interfaceName}'.");
-                        }
-                        return running;
-                    }
-                }
-                catch (Exception ex)
-                {
-                    LoggingService.Instance.Error("WireGuardCli", $"StartTunnel failed for '{interfaceName}'", ex);
-                }
-                return false;
-            });
+                    return false;
+                });
+            }
+            finally
+            {
+                _tunnelOperationLock.Release();
+            }
         }
 
         public async Task<bool> StopTunnelAsync(string interfaceName)
         {
             if (!IsValidInterfaceName(interfaceName) || !IsInstalled) return false;
 
-            return await Task.Run(() =>
+            await _tunnelOperationLock.WaitAsync();
+            try
             {
-                try
+                return await Task.Run(() =>
                 {
-                    string serviceName = GetServiceName(interfaceName);
-                    LoggingService.Instance.Info("WireGuardCli", $"Attempting to stop tunnel '{interfaceName}' (Service: {serviceName})...");
-                    
-                    ServiceController? existingService = null;
                     try
                     {
-                        var services = ServiceController.GetServices();
-                        existingService = services.FirstOrDefault(s => string.Equals(s.ServiceName, serviceName, StringComparison.OrdinalIgnoreCase));
-                    }
-                    catch (Exception ex)
-                    {
-                        LoggingService.Instance.Debug("WireGuardCli", $"Service lookup exception: {ex.Message}");
-                    }
-
-                    if (existingService == null)
-                    {
-                        if (!IsTunnelServiceRunning(interfaceName))
-                        {
-                            LoggingService.Instance.Info("WireGuardCli", 
-                                $"Service '{serviceName}' does not exist as an installed Windows service. Nothing to stop/uninstall.");
-                            FlushDnsCache();
-                            return true;
-                        }
-                        else
-                        {
-                            LoggingService.Instance.Info("WireGuardCli", 
-                                $"Service '{serviceName}' does not exist, but tunnel interface is active. Proceeding to cleanup.");
-                        }
-                    }
-                    else
-                    {
-                        if (existingService.Status == ServiceControllerStatus.Stopped)
-                        {
-                            LoggingService.Instance.Info("WireGuardCli", $"Service '{serviceName}' is already stopped.");
-                        }
-                        else if (existingService.Status == ServiceControllerStatus.StopPending)
-                        {
-                            LoggingService.Instance.Info("WireGuardCli", 
-                                $"Service '{serviceName}' is already in StopPending state. Waiting up to 8s for graceful completion...");
-                            try
-                            {
-                                existingService.WaitForStatus(ServiceControllerStatus.Stopped, TimeSpan.FromSeconds(8));
-                                LoggingService.Instance.Success("WireGuardCli", $"Service '{serviceName}' completed stop.");
-                            }
-                            catch (Exception ex)
-                            {
-                                LoggingService.Instance.Warning("WireGuardCli", 
-                                    $"Service '{serviceName}' StopPending wait timed out ({ex.Message}). Escalating to force-kill...");
-                                ForceKillServiceProcess(serviceName);
-                            }
-                        }
-                        else if (existingService.CanStop)
-                        {
-                            try
-                            {
-                                LoggingService.Instance.Info("WireGuardCli", $"Stopping service '{serviceName}'...");
-                                existingService.Stop();
-                                existingService.WaitForStatus(ServiceControllerStatus.Stopped, TimeSpan.FromSeconds(8));
-                                LoggingService.Instance.Success("WireGuardCli", $"Service '{serviceName}' stopped.");
-                            }
-                            catch (Exception ex)
-                            {
-                                LoggingService.Instance.Warning("WireGuardCli", 
-                                    $"Service '{serviceName}' graceful stop timed out or failed: {ex.Message}. Escalating to force-kill...");
-                                ForceKillServiceProcess(serviceName);
-                            }
-                        }
-                        else
-                        {
-                            LoggingService.Instance.Warning("WireGuardCli", 
-                                $"Service '{serviceName}' cannot stop gracefully (Status: {existingService.Status}). Force-terminating...");
-                            ForceKillServiceProcess(serviceName);
-                        }
-                    }
-
-                    // Allow NDIS and Wintun driver up to 1000ms to finish unregistering the virtual adapter in-memory (no wg.exe subprocess churn)
-                    for (int i = 0; i < 10; i++)
-                    {
-                        bool adapterPresent = System.Net.NetworkInformation.NetworkInterface.GetAllNetworkInterfaces()
-                            .Any(ni => string.Equals(ni.Name, interfaceName, StringComparison.OrdinalIgnoreCase) ||
-                                       string.Equals(ni.Description, interfaceName, StringComparison.OrdinalIgnoreCase));
-                        if (!adapterPresent) break;
-                        Thread.Sleep(100);
-                    }
-
-                    // Only perform service deletion if the service is STILL unrecoverably stuck after force-kill
-                    if (IsTunnelServiceRunning(interfaceName))
-                    {
-                        LoggingService.Instance.Warning("WireGuardCli", 
-                            $"Interface '{interfaceName}' still active after stop/kill attempts. Removing stuck service entry...");
-
-                        // Crucial: Release the .NET ServiceController handle before running sc delete,
-                        // otherwise Windows holds the service in ERROR_SERVICE_MARKED_FOR_DELETE (Error 1072).
-                        existingService?.Close();
-                        existingService?.Dispose();
-                        existingService = null;
-
+                        string serviceName = GetServiceName(interfaceName);
+                        LoggingService.Instance.Info("WireGuardCli", $"Attempting to stop tunnel '{interfaceName}' (Service: {serviceName})...");
+                        
+                        ServiceController? existingService = null;
                         try
                         {
-                            var psi = new ProcessStartInfo
+                            var services = ServiceController.GetServices();
+                            existingService = services.FirstOrDefault(s => string.Equals(s.ServiceName, serviceName, StringComparison.OrdinalIgnoreCase));
+                        }
+                        catch (Exception ex)
+                        {
+                            LoggingService.Instance.Debug("WireGuardCli", $"Service lookup exception: {ex.Message}");
+                        }
+
+                        if (existingService == null)
+                        {
+                            if (!IsTunnelServiceRunning(interfaceName))
                             {
-                                FileName = "sc.exe",
-                                Arguments = $"delete \"{serviceName}\"",
-                                UseShellExecute = false,
-                                CreateNoWindow = true
-                            };
-                            using var proc = Process.Start(psi);
-                            proc?.WaitForExit(3000);
+                                LoggingService.Instance.Info("WireGuardCli", 
+                                    $"Service '{serviceName}' does not exist as an installed Windows service. Nothing to stop/uninstall.");
+                                FlushDnsCache();
+                                return true;
+                            }
+                            else
+                            {
+                                LoggingService.Instance.Info("WireGuardCli", 
+                                    $"Service '{serviceName}' does not exist, but tunnel interface is active. Proceeding to cleanup.");
+                            }
+                        }
+                        else
+                        {
+                            using (existingService)
+                            {
+                                if (existingService.Status == ServiceControllerStatus.Stopped)
+                                {
+                                    LoggingService.Instance.Info("WireGuardCli", $"Service '{serviceName}' is already stopped.");
+                                }
+                                else if (existingService.Status == ServiceControllerStatus.StopPending)
+                                {
+                                    LoggingService.Instance.Info("WireGuardCli", 
+                                        $"Service '{serviceName}' is already in StopPending state. Waiting up to 8s for graceful completion...");
+                                    try
+                                    {
+                                        existingService.WaitForStatus(ServiceControllerStatus.Stopped, TimeSpan.FromSeconds(8));
+                                        LoggingService.Instance.Success("WireGuardCli", $"Service '{serviceName}' completed stop.");
+                                    }
+                                    catch (Exception ex)
+                                    {
+                                        LoggingService.Instance.Warning("WireGuardCli", 
+                                            $"Service '{serviceName}' StopPending wait timed out ({ex.Message}). Escalating to force-kill...");
+                                        ForceKillServiceProcess(serviceName);
+                                    }
+                                }
+                                else if (existingService.CanStop)
+                                {
+                                    try
+                                    {
+                                        LoggingService.Instance.Info("WireGuardCli", $"Stopping service '{serviceName}'...");
+                                        existingService.Stop();
+                                        existingService.WaitForStatus(ServiceControllerStatus.Stopped, TimeSpan.FromSeconds(8));
+                                        LoggingService.Instance.Success("WireGuardCli", $"Service '{serviceName}' stopped.");
+                                    }
+                                    catch (Exception ex)
+                                    {
+                                        LoggingService.Instance.Warning("WireGuardCli", 
+                                            $"Service '{serviceName}' graceful stop timed out or failed: {ex.Message}. Escalating to force-kill...");
+                                        ForceKillServiceProcess(serviceName);
+                                    }
+                                }
+                                else
+                                {
+                                    LoggingService.Instance.Warning("WireGuardCli", 
+                                        $"Service '{serviceName}' cannot stop gracefully (Status: {existingService.Status}). Force-terminating...");
+                                    ForceKillServiceProcess(serviceName);
+                                }
+                            }
+                        }
+
+                        // Allow NDIS and Wintun driver up to 1000ms to finish unregistering the virtual adapter in-memory (no wg.exe subprocess churn)
+                        for (int i = 0; i < 10; i++)
+                        {
+                            bool adapterPresent = System.Net.NetworkInformation.NetworkInterface.GetAllNetworkInterfaces()
+                                .Any(ni => string.Equals(ni.Name, interfaceName, StringComparison.OrdinalIgnoreCase) ||
+                                           string.Equals(ni.Description, interfaceName, StringComparison.OrdinalIgnoreCase));
+                            if (!adapterPresent) break;
+                            Thread.Sleep(100);
+                        }
+
+                        // Check if service is STILL running / hung in SCM after stop/kill attempts
+                        bool isStillRunning = false;
+                        try
+                        {
+                            using var verifySc = new ServiceController(serviceName);
+                            isStillRunning = (verifySc.Status == ServiceControllerStatus.Running || verifySc.Status == ServiceControllerStatus.StartPending);
                         }
                         catch { }
 
-                        // Final check: if still running, execute secondary force-kill
-                        if (IsTunnelServiceRunning(interfaceName))
+                        // ONLY perform service deletion if the service process is STILL running/hung after all stop/kill attempts
+                        if (isStillRunning)
                         {
                             LoggingService.Instance.Warning("WireGuardCli", 
-                                $"Interface '{interfaceName}' still reported running. Executing secondary force termination...");
+                                $"Service '{serviceName}' still active after stop/kill attempts. Removing stuck service entry...");
+
+                            try
+                            {
+                                var psi = new ProcessStartInfo
+                                {
+                                    FileName = "sc.exe",
+                                    Arguments = $"delete \"{serviceName}\"",
+                                    UseShellExecute = false,
+                                    CreateNoWindow = true
+                                };
+                                using var proc = Process.Start(psi);
+                                proc?.WaitForExit(3000);
+                            }
+                            catch { }
+
                             ForceKillServiceProcess(serviceName);
                         }
-                    }
 
-                    FlushDnsCache();
-                    bool stopped = !IsTunnelServiceRunning(interfaceName);
-                    LoggingService.Instance.Info("WireGuardCli", $"Tunnel '{interfaceName}' stop result: Stopped={stopped}");
-                    return stopped;
-                }
-                catch (Exception ex)
-                {
-                    LoggingService.Instance.Error("WireGuardCli", $"StopTunnel failed for '{interfaceName}'", ex);
-                }
-                return false;
-            });
+                        FlushDnsCache();
+                        bool stopped = !IsTunnelServiceRunning(interfaceName);
+                        LoggingService.Instance.Info("WireGuardCli", $"Tunnel '{interfaceName}' stop result: Stopped={stopped}");
+                        return stopped;
+                    }
+                    catch (Exception ex)
+                    {
+                        LoggingService.Instance.Error("WireGuardCli", $"StopTunnel failed for '{interfaceName}'", ex);
+                    }
+                    return false;
+                });
+            }
+            finally
+            {
+                _tunnelOperationLock.Release();
+            }
         }
 
         public async Task<bool> ForceStopTunnelAsync(string interfaceName)
