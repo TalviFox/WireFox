@@ -56,9 +56,11 @@ Write-Host "[*] Target Release Version: v$cleanVersion" -ForegroundColor Cyan
 
 # 2. Update WireFox.csproj Version
 if (-not $DryRun) {
-    Write-Host "[*] Updating <Version> in WireFox.csproj..." -ForegroundColor Cyan
+    Write-Host "[*] Updating version tags in WireFox.csproj..." -ForegroundColor Cyan
     $csprojContent = Get-Content $csprojPath -Raw
     $csprojContent = [regex]::Replace($csprojContent, "<Version>.*?</Version>", "<Version>$cleanVersion</Version>")
+    $csprojContent = [regex]::Replace($csprojContent, "<FileVersion>.*?</FileVersion>", "<FileVersion>$cleanVersion</FileVersion>")
+    $csprojContent = [regex]::Replace($csprojContent, "<AssemblyVersion>.*?</AssemblyVersion>", "<AssemblyVersion>$cleanVersion</AssemblyVersion>")
     Set-Content -Path $csprojPath -Value $csprojContent -Encoding UTF8
 }
 

@@ -15,9 +15,9 @@
     <Authors>FoxDen Software</Authors>
     <Description>Automated roaming and trusted network watchdog for WireGuard on Windows</Description>
     <Copyright>Copyright (c) 2026 FoxDen Software</Copyright>
-    <Version>1.0.7</Version>
-    <FileVersion>1.0.7</FileVersion>
-    <AssemblyVersion>1.0.7</AssemblyVersion>
+    <Version>1.0.8</Version>
+    <FileVersion>1.0.8</FileVersion>
+    <AssemblyVersion>1.0.8</AssemblyVersion>
     <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
     <IncludeAllContentForSelfExtract>true</IncludeAllContentForSelfExtract>
     <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
@@ -55,6 +55,8 @@
     <None Remove="1.0.5-Reference\**" />
   </ItemGroup>
 </Project>
+
+
 
 
 

@@ -1,5 +1,9 @@
 using System;
+using System.Diagnostics;
 using System.IO;
+using System.Linq;
+using System.Security.AccessControl;
+using System.Security.Principal;
 using System.Threading;
 using System.Windows;
 using System.Windows.Threading;
@@ -10,6 +14,7 @@ namespace WireFox
     public partial class App : System.Windows.Application
     {
         private static Mutex? _mutex;
+        private static bool _ownsMutex;
         private static EventWaitHandle? _showWindowEvent;
         private const string AppMutexName = "Global\\WireFox_SingleInstance_Mutex";
         private const string AppShowEventName = "Global\\WireFox_ShowInstance_Event";
@@ -20,7 +25,38 @@ namespace WireFox
             bool isInstalled = File.Exists(targetExe);
             bool isRunningFromProgramFiles = StartupService.IsRunningFromProgramFiles;
 
-            _mutex = new Mutex(true, AppMutexName, out bool isNewInstance);
+            bool isNewInstance = false;
+            try
+            {
+                var mutexSecurity = new MutexSecurity();
+                mutexSecurity.AddAccessRule(new MutexAccessRule(
+                    new SecurityIdentifier(WellKnownSidType.WorldSid, null),
+                    MutexRights.FullControl,
+                    AccessControlType.Allow));
+
+                _mutex = MutexAcl.Create(true, AppMutexName, out isNewInstance, mutexSecurity);
+                _ownsMutex = isNewInstance;
+            }
+            catch (UnauthorizedAccessException)
+            {
+                // Primary elevated instance is already running and owns the mutex
+                isNewInstance = false;
+                _ownsMutex = false;
+            }
+            catch
+            {
+                try
+                {
+                    _mutex = new Mutex(true, AppMutexName, out isNewInstance);
+                    _ownsMutex = isNewInstance;
+                }
+                catch
+                {
+                    isNewInstance = false;
+                    _ownsMutex = false;
+                }
+            }
+
             if (!isNewInstance)
             {
                 // Another instance is already running
@@ -34,6 +70,10 @@ namespace WireFox
                     {
                         if (StartupService.InstallToProgramFiles())
                         {
+                            if (_ownsMutex && _mutex != null)
+                            {
+                                try { _mutex.ReleaseMutex(); } catch { }
+                            }
                             _mutex?.Dispose();
                             _mutex = null;
                             Environment.Exit(0);
@@ -57,10 +97,48 @@ namespace WireFox
                 return;
             }
 
+            // Self-Elevation: The primary background watchdog requires Administrator privileges
+            bool isAdmin = new WindowsPrincipal(WindowsIdentity.GetCurrent()).IsInRole(WindowsBuiltInRole.Administrator);
+            if (!isAdmin)
+            {
+                if (_ownsMutex && _mutex != null)
+                {
+                    try { _mutex.ReleaseMutex(); } catch { }
+                }
+                _mutex?.Dispose();
+                _mutex = null;
+
+                try
+                {
+                    var startInfo = new ProcessStartInfo
+                    {
+                        FileName = Environment.ProcessPath ?? targetExe,
+                        UseShellExecute = true,
+                        Verb = "runas"
+                    };
+                    foreach (var arg in Environment.GetCommandLineArgs().Skip(1))
+                    {
+                        startInfo.ArgumentList.Add(arg);
+                    }
+
+                    Process.Start(startInfo);
+                }
+                catch { }
+
+                Environment.Exit(0);
+                return;
+            }
+
             // Register background listener to restore window when secondary instances launch
             try
             {
-                _showWindowEvent = new EventWaitHandle(false, EventResetMode.AutoReset, AppShowEventName);
+                var eventSecurity = new EventWaitHandleSecurity();
+                eventSecurity.AddAccessRule(new EventWaitHandleAccessRule(
+                    new SecurityIdentifier(WellKnownSidType.WorldSid, null),
+                    EventWaitHandleRights.FullControl,
+                    AccessControlType.Allow));
+
+                _showWindowEvent = EventWaitHandleAcl.Create(false, EventResetMode.AutoReset, AppShowEventName, out _, eventSecurity);
                 ThreadPool.RegisterWaitForSingleObject(_showWindowEvent, (state, timedOut) =>
                 {
                     Dispatcher.InvokeAsync(() =>
@@ -72,7 +150,24 @@ namespace WireFox
                     });
                 }, null, -1, false);
             }
-            catch { }
+            catch
+            {
+                try
+                {
+                    _showWindowEvent = new EventWaitHandle(false, EventResetMode.AutoReset, AppShowEventName);
+                    ThreadPool.RegisterWaitForSingleObject(_showWindowEvent, (state, timedOut) =>
+                    {
+                        Dispatcher.InvokeAsync(() =>
+                        {
+                            if (MainWindow is Views.MainWindow mw)
+                            {
+                                mw.ShowAndRestore();
+                            }
+                        });
+                    }, null, -1, false);
+                }
+                catch { }
+            }
 
             // Global exception logging
             DispatcherUnhandledException += OnDispatcherUnhandledException;
@@ -215,8 +310,16 @@ namespace WireFox
         {
             WatchdogService.Instance.Stop();
             _showWindowEvent?.Dispose();
-            _mutex?.ReleaseMutex();
+            if (_ownsMutex && _mutex != null)
+            {
+                try
+                {
+                    _mutex.ReleaseMutex();
+                }
+                catch { }
+            }
             _mutex?.Dispose();
+            _mutex = null;
             base.OnExit(e);
         }
     }
