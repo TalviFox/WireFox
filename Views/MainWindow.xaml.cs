@@ -2,8 +2,10 @@ using System;
 using System.ComponentModel;
 using System.Drawing;
 using System.IO;
+using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Forms;
+using System.Windows.Interop;
 using WireFox.Models;
 using WireFox.Services;
 using WireFox.ViewModels;
@@ -395,7 +397,7 @@ namespace WireFox.Views
 
         protected override void OnClosing(CancelEventArgs e)
         {
-            if (!_isExplicitExit)
+            if (!_isExplicitExit && !App.IsSessionEnding)
             {
                 e.Cancel = true;
                 Hide();
@@ -410,6 +412,58 @@ namespace WireFox.Views
             }
         }
 
+        [DllImport("user32.dll", SetLastError = true, CharSet = CharSet.Auto)]
+        private static extern uint RegisterWindowMessage(string lpString);
+
+        [DllImport("user32.dll")]
+        private static extern bool ShowWindowAsync(IntPtr hWnd, int nCmdShow);
+
+        [DllImport("user32.dll")]
+        private static extern bool SetForegroundWindow(IntPtr hWnd);
+
+        [DllImport("user32.dll")]
+        private static extern bool BringWindowToTop(IntPtr hWnd);
+
+        [DllImport("user32.dll")]
+        private static extern bool IsIconic(IntPtr hWnd);
+
+        private const int SW_RESTORE = 9;
+        private const int SW_SHOW = 5;
+        private uint _taskbarCreatedMsg;
+
+        protected override void OnSourceInitialized(EventArgs e)
+        {
+            base.OnSourceInitialized(e);
+            try
+            {
+                var helper = new WindowInteropHelper(this);
+                IntPtr hwnd = helper.Handle;
+                if (hwnd != IntPtr.Zero)
+                {
+                    _taskbarCreatedMsg = RegisterWindowMessage("TaskbarCreated");
+                    var source = HwndSource.FromHwnd(hwnd);
+                    source?.AddHook(HwndHook);
+                }
+            }
+            catch { }
+        }
+
+        private IntPtr HwndHook(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
+        {
+            if (_taskbarCreatedMsg != 0 && msg == (int)_taskbarCreatedMsg)
+            {
+                // Explorer restarted or shell finished initialization - revive tray icon
+                try
+                {
+                    _trayIcon.Visible = false;
+                    _trayIcon.Visible = true;
+                    UpdateTrayVisuals();
+                }
+                catch { }
+            }
+            return IntPtr.Zero;
+        }
+
         public void ShowAndRestore()
         {
             Dispatcher.InvokeAsync(() =>
@@ -417,15 +471,30 @@ namespace WireFox.Views
                 try
                 {
                     ShowInTaskbar = true;
+
+                    // Ensure HWND is initialized even if launched minimized to tray
+                    var helper = new WindowInteropHelper(this);
+                    IntPtr hwnd = helper.EnsureHandle();
+
+                    Visibility = Visibility.Visible;
+                    if (WindowState == WindowState.Minimized || (hwnd != IntPtr.Zero && IsIconic(hwnd)))
+                    {
+                        WindowState = WindowState.Normal;
+                    }
+
                     if (!IsVisible)
                     {
                         Show();
                     }
-                    Visibility = Visibility.Visible;
-                    if (WindowState == WindowState.Minimized)
+
+                    // Native Win32 window restoration to reliably bypass Windows 11 foreground suppression
+                    if (hwnd != IntPtr.Zero)
                     {
-                        WindowState = WindowState.Normal;
+                        ShowWindowAsync(hwnd, SW_RESTORE);
+                        BringWindowToTop(hwnd);
+                        SetForegroundWindow(hwnd);
                     }
+
                     Activate();
                     Topmost = true;
                     Topmost = false;

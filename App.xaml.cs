@@ -2,6 +2,7 @@ using System;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Security.AccessControl;
 using System.Security.Principal;
 using System.Threading;
@@ -16,8 +17,22 @@ namespace WireFox
         private static Mutex? _mutex;
         private static bool _ownsMutex;
         private static EventWaitHandle? _showWindowEvent;
+        private static RegisteredWaitHandle? _registeredWaitHandle;
         private const string AppMutexName = "Global\\WireFox_SingleInstance_Mutex";
         private const string AppShowEventName = "Global\\WireFox_ShowInstance_Event";
+
+        [DllImport("user32.dll")]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        private static extern bool AllowSetForegroundWindow(int dwProcessId);
+        private const int ASFW_ANY = -1;
+
+        public static bool IsSessionEnding { get; private set; }
+
+        protected override void OnSessionEnding(SessionEndingCancelEventArgs e)
+        {
+            IsSessionEnding = true;
+            base.OnSessionEnding(e);
+        }
 
         protected override void OnStartup(StartupEventArgs e)
         {
@@ -74,6 +89,7 @@ namespace WireFox
                             {
                                 try { _mutex.ReleaseMutex(); } catch { }
                             }
+                            _ownsMutex = false;
                             _mutex?.Dispose();
                             _mutex = null;
                             Environment.Exit(0);
@@ -81,6 +97,13 @@ namespace WireFox
                         }
                     }
                 }
+
+                // Grant foreground permission to the target running instance (bypasses Windows 11 ASFW restrictions)
+                try
+                {
+                    AllowSetForegroundWindow(ASFW_ANY);
+                }
+                catch { }
 
                 // Signal the primary running instance to immediately restore its window
                 try
@@ -92,6 +115,11 @@ namespace WireFox
                     }
                 }
                 catch { }
+
+                // Safely clear mutex reference before secondary shutdown so OnExit never releases unowned mutex
+                _ownsMutex = false;
+                _mutex?.Dispose();
+                _mutex = null;
 
                 Shutdown();
                 return;
@@ -105,6 +133,7 @@ namespace WireFox
                 {
                     try { _mutex.ReleaseMutex(); } catch { }
                 }
+                _ownsMutex = false;
                 _mutex?.Dispose();
                 _mutex = null;
 
@@ -139,13 +168,17 @@ namespace WireFox
                     AccessControlType.Allow));
 
                 _showWindowEvent = EventWaitHandleAcl.Create(false, EventResetMode.AutoReset, AppShowEventName, out _, eventSecurity);
-                ThreadPool.RegisterWaitForSingleObject(_showWindowEvent, (state, timedOut) =>
+                _registeredWaitHandle = ThreadPool.RegisterWaitForSingleObject(_showWindowEvent, (state, timedOut) =>
                 {
                     Dispatcher.InvokeAsync(() =>
                     {
                         if (MainWindow is Views.MainWindow mw)
                         {
                             mw.ShowAndRestore();
+                        }
+                        else if (Current.MainWindow is Views.MainWindow cmw)
+                        {
+                            cmw.ShowAndRestore();
                         }
                     });
                 }, null, -1, false);
@@ -155,13 +188,17 @@ namespace WireFox
                 try
                 {
                     _showWindowEvent = new EventWaitHandle(false, EventResetMode.AutoReset, AppShowEventName);
-                    ThreadPool.RegisterWaitForSingleObject(_showWindowEvent, (state, timedOut) =>
+                    _registeredWaitHandle = ThreadPool.RegisterWaitForSingleObject(_showWindowEvent, (state, timedOut) =>
                     {
                         Dispatcher.InvokeAsync(() =>
                         {
                             if (MainWindow is Views.MainWindow mw)
                             {
                                 mw.ShowAndRestore();
+                            }
+                            else if (Current.MainWindow is Views.MainWindow cmw)
+                            {
+                                cmw.ShowAndRestore();
                             }
                         });
                     }, null, -1, false);
@@ -299,24 +336,42 @@ namespace WireFox
         {
             try
             {
-                string logFile = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "app.log");
-                string logEntry = $"[{DateTime.UtcNow:u}] [{source}] {ex.Message}\n{ex.StackTrace}\n\n";
+                string logFile = LoggingService.Instance.LogFilePath;
+                string logEntry = $"[{DateTime.UtcNow:u}] [CRASH] [{source}] {ex.Message}\n{ex.StackTrace}\n\n";
                 File.AppendAllText(logFile, logEntry);
             }
-            catch { }
+            catch
+            {
+                try
+                {
+                    string fallbackLog = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "app.log");
+                    File.AppendAllText(fallbackLog, $"[{DateTime.UtcNow:u}] [CRASH] [{source}] {ex.Message}\n{ex.StackTrace}\n\n");
+                }
+                catch { }
+            }
         }
 
         protected override void OnExit(ExitEventArgs e)
         {
             WatchdogService.Instance.Stop();
+            _registeredWaitHandle?.Unregister(null);
+            _registeredWaitHandle = null;
             _showWindowEvent?.Dispose();
+            _showWindowEvent = null;
+
             if (_ownsMutex && _mutex != null)
             {
                 try
                 {
                     _mutex.ReleaseMutex();
                 }
-                catch { }
+                catch (ApplicationException) { }
+                catch (ObjectDisposedException) { }
+                catch (Exception) { }
+                finally
+                {
+                    _ownsMutex = false;
+                }
             }
             _mutex?.Dispose();
             _mutex = null;
