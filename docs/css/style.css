@@ -108,9 +108,9 @@ section[id] {
 
 /* Mobile Notice Banner */
 .mobile-notice-banner {
-  background: linear-gradient(90deg, rgba(8, 14, 26, 0.96), rgba(13, 24, 44, 0.96));
+  background: linear-gradient(135deg, rgba(8, 14, 26, 0.98), rgba(15, 26, 48, 0.98));
   border-bottom: 1px solid var(--border-frost);
-  padding: 12px 0;
+  padding: 10px 0;
   position: relative;
   z-index: 105;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
@@ -126,9 +126,6 @@ section[id] {
 }
 
 .mobile-notice-content {
-  display: flex;
-  align-items: center;
-  gap: 12px;
   flex: 1;
   min-width: 260px;
 }
@@ -136,22 +133,25 @@ section[id] {
 .mobile-notice-badge {
   display: inline-flex;
   align-items: center;
-  padding: 4px 10px;
+  padding: 3px 10px;
   border-radius: 9999px;
   background: rgba(56, 189, 248, 0.16);
   border: 1px solid var(--border-frost);
   color: var(--brand-frost-light);
-  font-size: 0.74rem;
+  font-size: 0.72rem;
   font-weight: 700;
-  white-space: nowrap;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
+  margin-right: 8px;
+  vertical-align: middle;
+  line-height: 1.3;
 }
 
 .mobile-notice-message {
-  font-size: 0.88rem;
+  font-size: 0.85rem;
   color: var(--text-secondary);
-  line-height: 1.45;
+  line-height: 1.5;
+  margin: 0;
 }
 
 .mobile-notice-message strong {
@@ -161,7 +161,7 @@ section[id] {
 .mobile-notice-actions {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   flex-shrink: 0;
 }
 
@@ -173,6 +173,8 @@ section[id] {
   border-radius: var(--radius-sm);
   font-size: 0.82rem;
   font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
   transition: all var(--transition-fast);
 }
 
@@ -199,21 +201,25 @@ section[id] {
 }
 
 .mobile-notice-close {
-  width: 28px;
-  height: 28px;
-  display: flex;
+  width: 26px;
+  height: 26px;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
   border-radius: 50%;
   color: var(--text-muted);
-  font-size: 1.3rem;
+  font-size: 1.25rem;
   line-height: 1;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--border-subtle);
+  cursor: pointer;
   transition: all var(--transition-fast);
 }
 
 .mobile-notice-close:hover {
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.15);
   color: var(--text-primary);
+  border-color: var(--border-frost);
 }
 
 /* Header & Navbar */
@@ -286,41 +292,50 @@ section[id] {
 .btn-foxden {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  padding: 8px 14px;
+  justify-content: center;
+  height: 40px;
+  padding: 0 16px;
+  box-sizing: border-box;
   border-radius: var(--radius-sm);
   background: rgba(255, 255, 255, 0.05);
   border: 1px solid var(--border-card);
-  font-size: 0.88rem;
-  font-weight: 500;
-  color: var(--text-primary);
   text-decoration: none;
   transition: all var(--transition-fast);
 }
 
-.btn-foxden .nav-btn-icon {
-  width: 17px;
-  height: 17px;
-  object-fit: contain;
-  transition: transform var(--transition-fast);
-}
-
 .btn-foxden:hover {
-  background: rgba(249, 115, 22, 0.12);
-  border-color: rgba(249, 115, 22, 0.5);
-  color: #fb923c;
+  background: rgba(56, 189, 248, 0.1);
+  border-color: var(--border-frost);
   transform: translateY(-1px);
 }
 
-.btn-foxden:hover .nav-btn-icon {
-  transform: scale(1.1);
+.foxden-desktop-logo {
+  display: block;
+  height: 22px;
+  width: auto;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+  object-fit: contain;
+}
+
+.foxden-mobile-avatar {
+  display: none;
+  width: 24px;
+  height: 24px;
+  border-radius: 4px;
+  object-fit: cover;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
 }
 
 .btn-kofi {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
+  height: 40px;
+  box-sizing: border-box;
   gap: 8px;
-  padding: 8px 14px;
+  padding: 0 16px;
   border-radius: var(--radius-sm);
   background: rgba(255, 94, 91, 0.1);
   border: 1px solid rgba(255, 94, 91, 0.35);
@@ -351,8 +366,11 @@ section[id] {
 .btn-github {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
+  height: 40px;
+  box-sizing: border-box;
   gap: 8px;
-  padding: 8px 14px;
+  padding: 0 16px;
   border-radius: var(--radius-sm);
   background: rgba(255, 255, 255, 0.05);
   border: 1px solid var(--border-card);
@@ -373,8 +391,11 @@ section[id] {
 .btn-nav-download {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
+  height: 40px;
+  box-sizing: border-box;
   gap: 8px;
-  padding: 8px 16px;
+  padding: 0 18px;
   border-radius: var(--radius-sm);
   background: linear-gradient(135deg, var(--brand-frost), var(--brand-blue));
   font-size: 0.88rem;
@@ -500,6 +521,9 @@ section[id] {
 }
 
 .hero-brand-heading span {
+  display: inline-block;
+  padding-right: 0.15em;
+  margin-right: -0.15em;
   background: linear-gradient(135deg, #a5f3fc 0%, #38bdf8 55%, #0284c7 100%);
   -webkit-background-clip: text;
   background-clip: text;
@@ -1068,18 +1092,25 @@ section[id] {
 .install-tabs-nav {
   display: flex;
   justify-content: center;
+  align-items: stretch;
   gap: 12px;
   margin-bottom: 30px;
 }
 
 .install-tab-btn {
-  padding: 10px 24px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px 22px;
   border-radius: var(--radius-sm);
   background: rgba(255, 255, 255, 0.04);
   border: 1px solid var(--border-card);
   color: var(--text-secondary);
   font-weight: 600;
-  font-size: 0.95rem;
+  font-size: 0.92rem;
+  white-space: nowrap;
+  text-align: center;
+  cursor: pointer;
   transition: all var(--transition-fast);
 }
 
@@ -1372,24 +1403,52 @@ section[id] {
 
 /* Responsive adjustments */
 @media (max-width: 768px) {
+  .container {
+    padding: 0 20px;
+  }
   .site-nav {
-    height: auto;
-    padding: 12px 0;
-    gap: 12px;
+    height: 64px;
+    gap: 10px;
   }
   .nav-actions {
     gap: 8px;
   }
+  .foxden-desktop-logo {
+    display: none !important;
+  }
+  .foxden-mobile-avatar {
+    display: block !important;
+  }
   .btn-foxden, .btn-kofi, .btn-github, .btn-nav-download {
-    padding: 6px 10px;
+    height: 36px;
+    padding: 0 10px;
     font-size: 0.82rem;
     gap: 6px;
+  }
+  .foxden-mobile-avatar {
+    width: 22px;
+    height: 22px;
   }
   .hero-section {
     padding: 50px 0 40px;
   }
   .features-grid {
     grid-template-columns: 1fr;
+  }
+  .install-tabs-nav {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+    width: 100%;
+    margin-bottom: 20px;
+  }
+  .install-tab-btn {
+    white-space: normal;
+    padding: 10px 8px;
+    font-size: 0.82rem;
+    min-height: 44px;
+    text-align: center;
+    line-height: 1.25;
   }
   .install-pane {
     padding: 24px 16px;
@@ -1419,14 +1478,28 @@ section[id] {
 }
 
 @media (max-width: 520px) {
-  .btn-foxden span,
+  .container {
+    padding: 0 16px;
+  }
   .btn-kofi span,
   .btn-github span {
     display: none;
   }
-  .btn-foxden,
   .btn-kofi,
   .btn-github {
     padding: 7px 10px;
+  }
+  .mobile-notice-actions {
+    width: 100%;
+  }
+  .btn-mobile-action {
+    flex: 1;
+    justify-content: center;
+    text-align: center;
+    padding: 8px 10px;
+  }
+  .footer-meta-brand {
+    flex-wrap: wrap;
+    gap: 10px;
   }
 }

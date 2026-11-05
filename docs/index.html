@@ -39,7 +39,7 @@
   <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 
   <!-- Stylesheet -->
-  <link rel="stylesheet" href="css/style.css?v=1.5">
+  <link rel="stylesheet" href="css/style.css?v=2.1">
 
   <!-- Schema.org JSON-LD for Search Engines -->
   <script type="application/ld+json">
@@ -71,23 +71,24 @@
 
   <!-- Mobile Notice Banner (Polite reminder for phone/tablet visitors) -->
   <aside class="mobile-notice-banner" id="mobile-notice" aria-label="Desktop application notice" style="display: none;">
-    <div class="container mobile-notice-inner">
-      <div class="mobile-notice-content">
-        <span class="mobile-notice-badge">Windows 10 &amp; 11 Utility</span>
-        <p class="mobile-notice-message">
-          <strong>Visiting from mobile?</strong> WireFox is built exclusively for Windows desktop PCs. You are welcome to grab the download or copy the link to open on your PC. Feel free to explore all features, architecture, and diagnostics below!
-        </p>
-      </div>
-      <div class="mobile-notice-actions">
-        <a href="https://github.com/TalviFox/WireFox/releases/latest" class="btn-mobile-action btn-mobile-dl" id="mobile-download-btn" title="Download WireFox executable">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
-          <span>Download</span>
-        </a>
-        <button class="btn-copy btn-mobile-action btn-mobile-copy" data-target="site-url-hidden" id="mobile-copy-btn" aria-label="Copy page link">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
-          <span>Copy Page Link</span>
-        </button>
-        <button class="mobile-notice-close" id="mobile-notice-close" aria-label="Dismiss notice">&times;</button>
+    <div class="container">
+      <div class="mobile-notice-inner">
+        <div class="mobile-notice-content">
+          <p class="mobile-notice-message">
+            <strong>Visiting from mobile?</strong> WireFox is built exclusively for Windows desktop PCs. Grab the download or copy the link to open on your PC.
+          </p>
+        </div>
+        <div class="mobile-notice-actions">
+          <a href="https://github.com/TalviFox/WireFox/releases/latest" class="btn-mobile-action btn-mobile-dl" id="mobile-download-btn" title="Download WireFox executable">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+            <span>Download</span>
+          </a>
+          <button class="btn-copy btn-mobile-action btn-mobile-copy" data-target="site-url-hidden" id="mobile-copy-btn" aria-label="Copy page link">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+            <span>Copy Link</span>
+          </button>
+          <button class="mobile-notice-close" id="mobile-notice-close" aria-label="Dismiss notice">&times;</button>
+        </div>
       </div>
     </div>
     <span id="site-url-hidden" style="display:none;">https://wirefox.foxdensoftware.dev/</span>
@@ -95,37 +96,39 @@
 
   <!-- Site Header & Navigation -->
   <header class="site-header">
-    <div class="container site-nav">
-      <a href="#" class="nav-brand" id="nav-brand">
-        <img src="assets/wirefox_icon.png" alt="WireFox Logo" class="nav-logo">
-        <span class="brand-text">Wire<span>Fox</span></span>
-      </a>
+    <div class="container">
+      <div class="site-nav">
+        <a href="#" class="nav-brand" id="nav-brand">
+          <img src="assets/wirefox_icon.png" alt="WireFox Logo" class="nav-logo">
+          <span class="brand-text">Wire<span>Fox</span></span>
+        </a>
 
-      <div class="nav-actions">
-        <a href="https://foxdensoftware.dev/" target="_blank" rel="noopener noreferrer" class="btn-foxden" id="nav-foxden-btn" title="FoxDen Software Main Site">
-          <img src="assets/FoxDen_Minimal_Universal.png" alt="FoxDen Software" class="nav-btn-icon">
-          <span>FoxDen</span>
-        </a>
-        <a href="https://ko-fi.com/foxdensoftware" target="_blank" rel="noopener noreferrer" class="btn-kofi" id="nav-kofi-btn" title="Support Talvi on Ko-fi">
-          <svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M23.881 8.948c-.773-4.085-4.859-4.593-4.859-4.593H.723c-.604 0-.679.798-.679.798s-.082 7.324-.022 11.822c.164 2.424 2.586 2.672 2.586 2.672s8.267-.023 11.966-.049c2.438-.426 2.683-2.566 2.658-3.734 4.352.24 7.422-2.831 6.649-6.916zm-11.062 3.511c-1.246 1.453-4.011 3.976-4.011 3.976s-.121.119-.31.023c-.076-.057-.108-.09-.108-.09-.443-.441-3.368-3.049-4.034-3.954-.709-.966-1.041-2.7-.091-3.71.951-1.01 3.005-1.086 4.363.407 0 0 1.565-1.782 3.468-.963 1.904.82 1.832 3.011.723 4.311zm6.173.478c-.928.116-1.682.028-1.682.028V7.284h1.77s1.971.551 1.971 2.373c0 1.822-1.131 3.16-2.059 3.279z"/>
-          </svg>
-          <span>Ko-fi</span>
-        </a>
-        <a href="https://github.com/TalviFox/WireFox" target="_blank" rel="noopener noreferrer" class="btn-github" id="nav-github-btn" title="View Source on GitHub">
-          <svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/>
-          </svg>
-          <span>GitHub</span>
-        </a>
-        <a href="https://github.com/TalviFox/WireFox/releases/latest" class="btn-nav-download" id="nav-download-btn">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-            <polyline points="7 10 12 15 17 10"></polyline>
-            <line x1="12" y1="15" x2="12" y2="3"></line>
-          </svg>
-          <span>Download</span>
-        </a>
+        <div class="nav-actions">
+          <a href="https://foxdensoftware.dev/" target="_blank" rel="noopener noreferrer" class="btn-foxden" id="nav-foxden-btn" title="FoxDen Software">
+            <img src="assets/foxden_logo_text.png" alt="FoxDen Software" class="foxden-desktop-logo">
+            <img src="assets/foxden_avatar.jpg" alt="FoxDen Software" class="foxden-mobile-avatar">
+          </a>
+          <a href="https://ko-fi.com/foxdensoftware" target="_blank" rel="noopener noreferrer" class="btn-kofi" id="nav-kofi-btn" title="Support Talvi on Ko-fi">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M23.881 8.948c-.773-4.085-4.859-4.593-4.859-4.593H.723c-.604 0-.679.798-.679.798s-.082 7.324-.022 11.822c.164 2.424 2.586 2.672 2.586 2.672s8.267-.023 11.966-.049c2.438-.426 2.683-2.566 2.658-3.734 4.352.24 7.422-2.831 6.649-6.916zm-11.062 3.511c-1.246 1.453-4.011 3.976-4.011 3.976s-.121.119-.31.023c-.076-.057-.108-.09-.108-.09-.443-.441-3.368-3.049-4.034-3.954-.709-.966-1.041-2.7-.091-3.71.951-1.01 3.005-1.086 4.363.407 0 0 1.565-1.782 3.468-.963 1.904.82 1.832 3.011.723 4.311zm6.173.478c-.928.116-1.682.028-1.682.028V7.284h1.77s1.971.551 1.971 2.373c0 1.822-1.131 3.16-2.059 3.279z"/>
+            </svg>
+            <span>Ko-fi</span>
+          </a>
+          <a href="https://github.com/TalviFox/WireFox" target="_blank" rel="noopener noreferrer" class="btn-github" id="nav-github-btn" title="View Source on GitHub">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/>
+            </svg>
+            <span>GitHub</span>
+          </a>
+          <a href="https://github.com/TalviFox/WireFox/releases/latest" class="btn-nav-download" id="nav-download-btn">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+              <polyline points="7 10 12 15 17 10"></polyline>
+              <line x1="12" y1="15" x2="12" y2="3"></line>
+            </svg>
+            <span>Download</span>
+          </a>
+        </div>
       </div>
     </div>
   </header>
@@ -720,7 +723,7 @@
             <a href="https://foxdensoftware.dev/" target="_blank" rel="noopener noreferrer" class="footer-foxden-link" title="Crafted with care by FoxDen Software">
               <img src="assets/FoxDen_Minimal_Universal.png" alt="FoxDen Software Logo" class="footer-foxden-logo">
             </a>
-            <span class="footer-copyright">Copyright &copy; 2026 <a href="https://foxdensoftware.dev/" target="_blank" rel="noopener noreferrer" style="color:var(--text-secondary); text-decoration:none;">FoxDen Software</a>. Source-available under PolyForm Perimeter License 1.0.0.</span>
+            <span class="footer-copyright">Copyright &copy; 2026 <a href="https://foxdensoftware.dev/" target="_blank" rel="noopener noreferrer" style="color:var(--brand-frost-light); text-decoration:none;">FoxDen Software</a>. Source-available under PolyForm Perimeter License 1.0.0.</span>
           </div>
           <div class="footer-disclaimer">
             <strong>Early Access &amp; Security Disclaimer:</strong> WireFox is independent, early-access software provided on an "as is" and "as available" basis without warranties of any kind, express or implied. While WireFox is designed to automate and manage WireGuard tunnels, network conditions and local adapter behaviors vary. Users are solely responsible for ensuring their network environment and data security requirements are satisfied.
