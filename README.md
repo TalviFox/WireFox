@@ -7,7 +7,7 @@
 <p align="center">
   <em>Intelligent Network Roaming &amp; Watchdog Manager for WireGuard on Windows</em><br>
   <em>The WireGuard companion fox you didn't know you needed.</em><br>
-  <em>Crafted with care by FoxDen Software</em>
+  <em>Crafted with care by <a href="https://foxdensoftware.dev/">FoxDen Software</a></em>
 </p>
 
 <p align="center">
@@ -18,6 +18,7 @@
   <a href="https://github.com/microsoft/winget-pkgs/pull/433833"><img src="https://img.shields.io/badge/WinGet-FoxDenSoftware.WireFox-blue?logo=windows&logoColor=white" alt="WinGet Package" /></a>
   <a href="https://github.com/TalviFox/WireFox/releases"><img src="https://img.shields.io/github/downloads/TalviFox/WireFox/total?color=orange&label=Downloads" alt="GitHub Downloads" /></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-PolyForm%20Perimeter-blue.svg" alt="License" /></a>
+  <a href="https://ko-fi.com/foxdensoftware"><img src="https://img.shields.io/badge/Ko--fi-Support-ff5e5b?logo=kofi&logoColor=white" alt="Support on Ko-fi" /></a>
 </p>
 
 > *"On iOS and Android, WireGuard connects when you leave the house and disconnects on your home Wi-Fi. On Windows laptops... you were left clicking buttons manually like a caveman or hacking fragile Task Scheduler scripts."*
