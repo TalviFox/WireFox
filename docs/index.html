@@ -57,13 +57,77 @@
     "author": {
       "@type": "Organization",
       "name": "FoxDen Software",
-      "url": "https://github.com/TalviFox"
+      "url": "https://foxdensoftware.dev/"
     },
     "offers": {
       "@type": "Offer",
       "price": "0",
       "priceCurrency": "USD"
     }
+  }
+  </script>
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    "mainEntity": [
+      {
+        "@type": "Question",
+        "name": "How do I auto-connect WireGuard on untrusted Wi-Fi in Windows without Task Scheduler scripts?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Install WireFox (winget install FoxDenSoftware.WireFox). It monitors Windows network adapter handoffs, verifies default gateway MAC addresses via ARP anti-spoofing, automatically activates your WireGuard tunnel on untrusted Wi-Fi, disconnects on trusted home/office networks, and recovers deadlocked StopPending tunnels with DNS cache flushing."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Do I still need the official WireGuard app installed?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Yes. WireFox is a companion automation manager, not a standalone VPN client. It works alongside your official WireGuard installation through wireguard.exe and wg.exe so your existing tunnels connect and disconnect automatically based on your network."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "What is WireFox actually doing behind the scenes?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "WireFox listens to Windows network adapter events, verifies router hardware against ARP gateway tables, and manages your WireGuard tunnels via the official CLI—automatically hitting Connect the split second you leave trusted Wi-Fi."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Why does WireFox require Administrator permissions?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "On Windows, starting and stopping WireGuard tunnel services and querying physical gateway MAC addresses via unmanaged ARP calls requires elevation. WireFox registers an elevated Windows Scheduled Task on boot so it runs in the background without UAC prompts."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "How does Gateway MAC (ARP) Anti-Spoofing protect me?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "WireFox queries the physical hardware MAC address of the default gateway router via unmanaged ARP calls. If a rogue hotspot spoofs your home SSID name with a different gateway MAC, WireFox treats it as untrusted and activates the WireGuard tunnel immediately."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Does WireFox collect telemetry, logs, or analytics?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Zero. WireFox has no tracking SDKs, no external telemetry servers, no accounts, and no analytics. All network evaluations happen 100% locally on your machine."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "How do I uninstall WireFox cleanly?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Click Uninstall WireFox inside Settings > About, or run uninstall.ps1 (or winget uninstall FoxDenSoftware.WireFox) to remove the scheduled boot tasks, shortcuts, and Program Files directory."
+        }
+      }
+    ]
   }
   </script>
 </head>
@@ -108,7 +172,7 @@
             <img src="assets/foxden_logo_text.png" alt="FoxDen Software" class="foxden-desktop-logo">
             <img src="assets/foxden_avatar.jpg" alt="FoxDen Software" class="foxden-mobile-avatar">
           </a>
-          <a href="https://ko-fi.com/foxdensoftware" target="_blank" rel="noopener noreferrer" class="btn-kofi" id="nav-kofi-btn" title="Support Talvi on Ko-fi">
+          <a href="https://ko-fi.com/talvisden" target="_blank" rel="noopener noreferrer" class="btn-kofi" id="nav-kofi-btn" title="Support Talvi on Ko-fi">
             <svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor">
               <path d="M23.881 8.948c-.773-4.085-4.859-4.593-4.859-4.593H.723c-.604 0-.679.798-.679.798s-.082 7.324-.022 11.822c.164 2.424 2.586 2.672 2.586 2.672s8.267-.023 11.966-.049c2.438-.426 2.683-2.566 2.658-3.734 4.352.24 7.422-2.831 6.649-6.916zm-11.062 3.511c-1.246 1.453-4.011 3.976-4.011 3.976s-.121.119-.31.023c-.076-.057-.108-.09-.108-.09-.443-.441-3.368-3.049-4.034-3.954-.709-.966-1.041-2.7-.091-3.71.951-1.01 3.005-1.086 4.363.407 0 0 1.565-1.782 3.468-.963 1.904.82 1.832 3.011.723 4.311zm6.173.478c-.928.116-1.682.028-1.682.028V7.284h1.77s1.971.551 1.971 2.373c0 1.822-1.131 3.16-2.059 3.279z"/>
             </svg>
@@ -584,8 +648,19 @@
         </div>
 
         <div class="faq-list">
-          <!-- FAQ 1 -->
+          <!-- FAQ 0: Auto-Connect / WinGet -->
           <div class="faq-item open">
+            <button class="faq-question">
+              <span>How do I auto-connect WireGuard on untrusted Wi-Fi in Windows without Task Scheduler scripts?</span>
+              <svg class="faq-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"></polyline></svg>
+            </button>
+            <div class="faq-answer">
+              Install WireFox directly via <code style="color:var(--brand-frost)">winget install FoxDenSoftware.WireFox</code>. Unlike brittle Task Scheduler or <code style="color:var(--brand-orange)">netsh</code> Event 8001 scripts, WireFox reacts to live Windows network adapter changes, verifies router gateway MAC addresses, handles captive portals and full-tunnel (<code style="color:var(--brand-frost)">0.0.0.0/0</code>) routing, and automatically recovers deadlocked <code style="color:var(--brand-orange)">StopPending</code> tunnels with DNS cache flushing.
+            </div>
+          </div>
+
+          <!-- FAQ 1 -->
+          <div class="faq-item">
             <button class="faq-question">
               <span>Do I still need the official WireGuard app installed?</span>
               <svg class="faq-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"></polyline></svg>
@@ -707,7 +782,7 @@
         </div>
         <ul class="footer-links">
           <li><a href="https://foxdensoftware.dev/" target="_blank" rel="noopener noreferrer" class="footer-link">FoxDen Software</a></li>
-          <li><a href="https://ko-fi.com/foxdensoftware" target="_blank" rel="noopener noreferrer" class="footer-link">Support on Ko-fi</a></li>
+          <li><a href="https://ko-fi.com/talvisden" target="_blank" rel="noopener noreferrer" class="footer-link">Support on Ko-fi</a></li>
           <li><a href="#features" class="footer-link">Features</a></li>
           <li><a href="#showcase" class="footer-link">Screenshots</a></li>
           <li><a href="#install" class="footer-link">Installation</a></li>
