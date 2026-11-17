@@ -33,6 +33,7 @@ namespace WireFox.ViewModels
         private string _updateStatusText = "Up to date";
         private string _updateProgressText = "";
         private string _newVersionTag = "";
+        private readonly System.Windows.Threading.Dispatcher _dispatcher;
 
         public event Action? InitialSetupFinished;
 
@@ -273,8 +274,10 @@ namespace WireFox.ViewModels
 
         public SettingsViewModel()
         {
+            _dispatcher = System.Windows.Application.Current?.Dispatcher ?? System.Windows.Threading.Dispatcher.CurrentDispatcher;
+
             SaveSettingsCommand = new RelayCommand(AutoSave);
-            RefreshTunnelsCommand = new RelayCommand(RefreshAvailableTunnels);
+            RefreshTunnelsCommand = new RelayCommand(async () => await RefreshAvailableTunnelsAsync());
             BrowseConfigFileCommand = new RelayCommand(BrowseConfigFile);
             CompleteInitialSetupCommand = new RelayCommand(CompleteInitialSetup);
             DetectAllowedIpsCommand = new RelayCommand(DetectDefaultAllowedIps);
@@ -288,7 +291,7 @@ namespace WireFox.ViewModels
             InstallToProgramFilesCommand = new RelayCommand(ExecuteInstallToProgramFiles);
 
             LoadSettings();
-            RefreshAvailableTunnels();
+            _ = RefreshAvailableTunnelsAsync();
         }
 
         private void CompleteInitialSetup()
@@ -389,50 +392,63 @@ namespace WireFox.ViewModels
             LoggingService.Instance.Info("Settings", $"Cleared Split-Tunnel Allowed IPs for '{InterfaceName}'");
         }
 
-        private void RefreshAvailableTunnels()
+        private async Task RefreshAvailableTunnelsAsync()
         {
-            _isRefreshingTunnels = true;
+            if (_isRefreshingTunnels) return;
+
             try
             {
-                string current = InterfaceName;
-                AvailableTunnels.Clear();
-                var discovered = WireGuardCliService.Instance.GetDiscoveredTunnelNames();
-                foreach (var t in discovered)
+                var discovered = await Task.Run(() => WireGuardCliService.Instance.GetDiscoveredTunnelNames());
+
+                await _dispatcher.InvokeAsync(() =>
                 {
-                    if (!AvailableTunnels.Contains(t))
+                    _isRefreshingTunnels = true;
+                    try
                     {
-                        AvailableTunnels.Add(t);
-                    }
-                }
-                if (!string.IsNullOrWhiteSpace(current) && !AvailableTunnels.Contains(current))
-                {
-                    AvailableTunnels.Add(current);
-                }
-                if (AvailableTunnels.Count == 0)
-                {
-                    AvailableTunnels.Add("wg0");
-                }
+                        string current = InterfaceName;
+                        AvailableTunnels.Clear();
+                        foreach (var t in discovered)
+                        {
+                            if (!AvailableTunnels.Contains(t))
+                            {
+                                AvailableTunnels.Add(t);
+                            }
+                        }
+                        if (!string.IsNullOrWhiteSpace(current) && !AvailableTunnels.Contains(current))
+                        {
+                            AvailableTunnels.Add(current);
+                        }
+                        if (AvailableTunnels.Count == 0)
+                        {
+                            AvailableTunnels.Add("wg0");
+                        }
 
-                // If on initial setup, auto-select first discovered tunnel
-                if (_isInitialSetup && discovered.Count > 0)
-                {
-                    if (string.IsNullOrWhiteSpace(current) || (current == "wg0" && !discovered.Contains("wg0")))
+                        // If on initial setup, auto-select first discovered tunnel
+                        if (_isInitialSetup && discovered.Count > 0)
+                        {
+                            if (string.IsNullOrWhiteSpace(current) || (current == "wg0" && !discovered.Contains("wg0")))
+                            {
+                                current = discovered[0];
+                            }
+                        }
+
+                        _interfaceName = current;
+                        _currentLoadedInterface = current;
+                        LoadTunnelProfile(current);
+
+                        OnPropertyChanged(nameof(InterfaceName));
+                        OnPropertyChanged(nameof(InitialSetupPromptText));
+                        OnPropertyChanged(nameof(ConfiguredTunnelHeader));
+                    }
+                    finally
                     {
-                        current = discovered[0];
+                        _isRefreshingTunnels = false;
                     }
-                }
-
-                _interfaceName = current;
-                _currentLoadedInterface = current;
-                LoadTunnelProfile(current);
-
-                OnPropertyChanged(nameof(InterfaceName));
-                OnPropertyChanged(nameof(InitialSetupPromptText));
-                OnPropertyChanged(nameof(ConfiguredTunnelHeader));
+                });
             }
-            finally
+            catch (Exception ex)
             {
-                _isRefreshingTunnels = false;
+                LoggingService.Instance.Debug("Settings", $"RefreshAvailableTunnelsAsync error: {ex.Message}");
             }
         }
 

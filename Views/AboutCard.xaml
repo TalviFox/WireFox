@@ -1,0 +1,83 @@
+<UserControl x:Class="WireFox.Views.AboutCard"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml">
+    <ui:Card Padding="20">
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+
+            <Grid Grid.Row="0">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+
+                <Border Width="48" Height="48" CornerRadius="8" Margin="0,0,16,0" VerticalAlignment="Center" Background="{DynamicResource ControlFillColorDefaultBrush}">
+                    <Image Source="/Assets/wirefox_icon.png" Width="40" Height="40" RenderOptions.BitmapScalingMode="HighQuality" />
+                </Border>
+
+                <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                    <WrapPanel Orientation="Horizontal">
+                        <ui:TextBlock Text="WireFox" FontSize="18" FontWeight="Bold" Margin="0,0,10,4" VerticalAlignment="Center" />
+                        <Border Margin="0,0,8,4" Padding="8,2" CornerRadius="4" Background="{DynamicResource ControlFillColorSecondaryBrush}" VerticalAlignment="Center">
+                            <ui:TextBlock Text="{Binding CurrentVersion}" FontSize="11" FontWeight="SemiBold" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                        </Border>
+                        <Border Margin="0,0,0,4" Padding="8,2" CornerRadius="4" Background="{DynamicResource ControlFillColorSecondaryBrush}" VerticalAlignment="Center">
+                            <ui:TextBlock Text="License: PolyForm Perimeter" FontSize="11" FontWeight="SemiBold" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                        </Border>
+                    </WrapPanel>
+                    <Image Source="/Assets/foxdensoftware.png"
+                           Height="15"
+                           HorizontalAlignment="Left"
+                           Margin="0,2,0,4"
+                           RenderOptions.BitmapScalingMode="NearestNeighbor" />
+                    <ui:TextBlock Text="Copyright &#xA9; 2026 FoxDen Software &#x2022; Automated WireGuard Roaming Assistant"
+                                  FontSize="12" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="0,2,0,0" TextWrapping="Wrap" />
+                </StackPanel>
+            </Grid>
+
+            <Border Grid.Row="1" Margin="0,14,0,0" Padding="0,12,0,0" BorderThickness="0,1,0,0" BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}">
+                <StackPanel>
+                    <ui:TextBlock Text="Developed and maintained by FoxDen Software. Source-available under PolyForm Perimeter License 1.0.0: free to inspect, fork, and use; commercial competition/repackaging prohibited."
+                                  FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}" Margin="0,0,0,6" TextWrapping="Wrap" />
+                    <ui:TextBlock Text="WireGuard&#xAE; is a registered trademark of Jason A. Donenfeld. WireFox is an independent companion tool and is not affiliated with, endorsed by, or sponsored by Jason A. Donenfeld or the WireGuard development team."
+                                  FontSize="11" Foreground="{DynamicResource TextFillColorTertiaryBrush}" TextWrapping="Wrap" />
+                    <Grid Margin="0,10,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <WrapPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                            <ui:HyperlinkButton Content="GitHub"
+                                                NavigateUri="https://github.com/TalviFox/WireFox"
+                                                Padding="6,3"
+                                                Margin="0,0,8,0"
+                                                FontSize="11" />
+                            <ui:HyperlinkButton Content="Releases"
+                                                NavigateUri="https://github.com/TalviFox/WireFox/releases"
+                                                Padding="6,3"
+                                                Margin="0,0,8,0"
+                                                FontSize="11" />
+                            <ui:HyperlinkButton Content="Report Issue"
+                                                NavigateUri="https://github.com/TalviFox/WireFox/issues"
+                                                Padding="6,3"
+                                                FontSize="11" />
+                        </WrapPanel>
+                        <ui:HyperlinkButton Grid.Column="1"
+                                            Content="Iced Latte Fund (Ko-fi)"
+                                            NavigateUri="https://ko-fi.com/foxdensoftware"
+                                            Padding="6,3"
+                                            FontSize="11"
+                                            HorizontalAlignment="Right"
+                                            VerticalAlignment="Center"
+                                            Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                                            ToolTip="Buy an iced latte for Talvi Fox on Ko-fi" />
+                    </Grid>
+                </StackPanel>
+            </Border>
+        </Grid>
+    </ui:Card>
+</UserControl>

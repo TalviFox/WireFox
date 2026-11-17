@@ -21,28 +21,34 @@
             <ui:TextBlock Text="Status" FontSize="26" FontWeight="SemiBold" Margin="0,0,0,18" Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
 
             <!-- Hero Status Card -->
-            <ui:CardControl Padding="20" Margin="0,0,0,16">
-                <ui:CardControl.Header>
-                    <StackPanel Orientation="Horizontal" Margin="0,0,16,0">
-                        <Image Source="{Binding StatusImage}" 
-                               Width="54" 
-                               Height="54" 
-                               Margin="0,0,18,0" 
-                               VerticalAlignment="Center"
-                               RenderOptions.BitmapScalingMode="HighQuality" />
-                        <StackPanel VerticalAlignment="Center">
-                            <ui:TextBlock Text="Tunnel State" FontSize="12" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
-                            <ui:TextBlock Text="{Binding StatusText}" FontSize="18" FontWeight="SemiBold" />
-                            <ui:TextBlock Text="{Binding ActiveTunnelName, StringFormat='Tunnel: {0}'}" FontSize="12" Foreground="{DynamicResource TextFillColorTertiaryBrush}" Margin="0,2,0,0" />
-                        </StackPanel>
+            <ui:Card Padding="20" Margin="0,0,0,16">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <Image Grid.Column="0"
+                           Source="{Binding StatusImage}" 
+                           Width="54" 
+                           Height="54" 
+                           Margin="0,0,18,0" 
+                           VerticalAlignment="Center"
+                           RenderOptions.BitmapScalingMode="HighQuality" />
+                    <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="0,0,16,0">
+                        <ui:TextBlock Text="Tunnel State" FontSize="12" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                        <ui:TextBlock Text="{Binding StatusText}" FontSize="18" FontWeight="SemiBold" TextWrapping="Wrap" />
+                        <ui:TextBlock Text="{Binding ActiveTunnelName, StringFormat='Tunnel: {0}'}" FontSize="12" Foreground="{DynamicResource TextFillColorTertiaryBrush}" Margin="0,2,0,0" TextWrapping="Wrap" />
                     </StackPanel>
-                </ui:CardControl.Header>
-                <ui:ToggleSwitch IsChecked="{Binding IsTunnelActive, Mode=OneWay}"
-                                 Command="{Binding ToggleTunnelCommand}"
-                                 OnContent="Enabled"
-                                 OffContent="Disabled"
-                                 HorizontalAlignment="Right" />
-            </ui:CardControl>
+                    <ui:ToggleSwitch Grid.Column="2"
+                                     IsChecked="{Binding IsTunnelActive, Mode=OneWay}"
+                                     Command="{Binding ToggleTunnelCommand}"
+                                     OnContent="Enabled"
+                                     OffContent="Disabled"
+                                     VerticalAlignment="Center"
+                                     HorizontalAlignment="Right" />
+                </Grid>
+            </ui:Card>
 
             <!-- MAC Mismatch Warning Card -->
             <ui:CardControl Padding="16" Margin="0,0,0,16" Visibility="{Binding IsMacMismatch, Converter={StaticResource BoolToVisConverter}}">
@@ -87,7 +93,7 @@
                         </Grid>
 
                         <!-- Gateway / DNS Details -->
-                        <Grid Margin="0,0,0,8">
+                        <Grid Margin="0,0,0,8" Visibility="{Binding HasConnectionDetails, Converter={StaticResource BoolToVisConverter}}">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="150" />
                                 <ColumnDefinition Width="*" />

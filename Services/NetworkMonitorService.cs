@@ -23,6 +23,7 @@ namespace WireFox.Services
         private CancellationTokenSource? _debounceCts;
         private readonly object _lock = new();
         private readonly TimeSpan _debounceDelay = TimeSpan.FromMilliseconds(2000);
+        private DateTime _resumeGraceUntilUtc = DateTime.MinValue;
         private NetworkState _currentState = new();
         private bool _isStarted;
 
@@ -86,8 +87,12 @@ namespace WireFox.Services
         {
             if (e.Mode == PowerModes.Resume)
             {
-                LoggingService.Instance.Info("NetworkMonitor", "System resumed from sleep, queuing evaluation");
-                TriggerDebouncedEvaluation(TimeSpan.FromSeconds(3));
+                LoggingService.Instance.Info("NetworkMonitor", "System resumed from sleep, enforcing post-wake settling delay");
+                lock (_lock)
+                {
+                    _resumeGraceUntilUtc = DateTime.UtcNow.AddSeconds(4);
+                }
+                TriggerDebouncedEvaluation(TimeSpan.FromSeconds(4));
             }
         }
 
@@ -95,6 +100,12 @@ namespace WireFox.Services
         {
             lock (_lock)
             {
+                var graceRemaining = _resumeGraceUntilUtc - DateTime.UtcNow;
+                if (graceRemaining > delay)
+                {
+                    delay = graceRemaining;
+                }
+
                 _debounceCts?.Cancel();
                 _debounceCts?.Dispose();
                 _debounceCts = new CancellationTokenSource();
@@ -365,6 +376,7 @@ namespace WireFox.Services
 
             var result = new NetworkState
             {
+                IsEvaluated = true,
                 Ssid = activeSsid,
                 Bssid = wifiBssid,
                 AdapterName = adapterName,
@@ -400,6 +412,7 @@ namespace WireFox.Services
                 ni.NetworkInterfaceType != NetworkInterfaceType.Loopback &&
                 !ni.Description.Contains("Hyper-V", StringComparison.OrdinalIgnoreCase) &&
                 !ni.Description.Contains("vEthernet", StringComparison.OrdinalIgnoreCase) &&
+                !ni.Name.Contains("vEthernet", StringComparison.OrdinalIgnoreCase) &&
                 !ni.Description.Contains("WSL", StringComparison.OrdinalIgnoreCase) &&
                 !ni.Description.Contains("VirtualBox", StringComparison.OrdinalIgnoreCase) &&
                 !ni.Description.Contains("VMware", StringComparison.OrdinalIgnoreCase) &&

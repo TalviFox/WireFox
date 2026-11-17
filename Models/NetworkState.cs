@@ -5,6 +5,7 @@ namespace WireFox.Models
     public class NetworkState
     {
         public string Ssid { get; set; } = string.Empty;
+        public bool IsEvaluated { get; set; }
         public bool IsConnected { get; set; }
         public bool IsWireless { get; set; }
         public bool IsTrusted { get; set; }

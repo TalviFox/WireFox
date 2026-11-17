@@ -31,7 +31,8 @@ namespace WireFox.Services
         private bool _isStarted;
         private int _consecutiveFailures = 0;
         private readonly List<DateTime> _restartTimestamps = new();
-        private readonly SemaphoreSlim _networkSettledLock = new(1, 1);
+        private readonly SemaphoreSlim _watchdogLock = new(1, 1);
+        private int _isPeriodicRunning;
         private long _lastTxBytes = 0;
         private long _lastRxBytes = 0;
 
@@ -93,11 +94,20 @@ namespace WireFox.Services
 
         private async void OnNetworkSettled(NetworkState state)
         {
-            await _networkSettledLock.WaitAsync();
             try
             {
+                await _watchdogLock.WaitAsync();
+                try
+                {
                 var config = ConfigManager.Instance.Config;
                 var cli = WireGuardCliService.Instance;
+
+                if (!config.InitialSetupCompleted)
+                {
+                    LoggingService.Instance.Debug("WatchdogService", "Initial setup not completed; skipping automatic tunnel actions.");
+                    SetStatus(TunnelStatus.Disconnected);
+                    return;
+                }
 
                 if (!cli.IsInstalled)
                 {
@@ -207,56 +217,91 @@ namespace WireFox.Services
                 }
 
                 await Task.Delay(2000);
-                await RefreshStatusAsync();
+                await RefreshStatusCoreAsync();
+                }
+                finally
+                {
+                    _watchdogLock.Release();
+                }
             }
-            finally
+            catch (Exception ex)
             {
-                _networkSettledLock.Release();
+                LoggingService.Instance.Error("WatchdogService", "OnNetworkSettled error", ex);
             }
         }
 
         private async Task OnPeriodicCheckAsync()
         {
+            if (Interlocked.CompareExchange(ref _isPeriodicRunning, 1, 0) != 0)
+            {
+                return;
+            }
+
             try
             {
-                // 1. Check Session Timer (Pause or Split Tunnel)
-                if (_sessionExpiresUtc.HasValue)
+                await _watchdogLock.WaitAsync();
+                try
                 {
-                    var remaining = _sessionExpiresUtc.Value - DateTime.UtcNow;
-                    if (remaining <= TimeSpan.Zero)
+                    // 1. Check Session Timer (Pause or Split Tunnel)
+                    if (_sessionExpiresUtc.HasValue)
                     {
-                        // Session expired - Revert to full tunnel
-                        _sessionExpiresUtc = null;
-                        _warningSentForCurrentSession = false;
-                        SessionTimeRemainingUpdated?.Invoke(null);
-                        await RevertToFullTunnelAsync();
-                    }
-                    else
-                    {
-                        SessionTimeRemainingUpdated?.Invoke(remaining);
-
-                        // 5-minute warning toast
-                        if (remaining <= TimeSpan.FromMinutes(5) && !_warningSentForCurrentSession)
+                        var remaining = _sessionExpiresUtc.Value - DateTime.UtcNow;
+                        if (remaining <= TimeSpan.Zero)
                         {
-                            _warningSentForCurrentSession = true;
-                            string sessionName = _status == TunnelStatus.Paused ? "Pause" : "Split-Tunnel";
-                            int mins = Math.Max(1, (int)Math.Ceiling(remaining.TotalMinutes));
-                            NotificationService.Instance.ShowTimerExpiringWarning(sessionName, mins);
+                            // Session expired - Revert to full tunnel
+                            _sessionExpiresUtc = null;
+                            _warningSentForCurrentSession = false;
+                            SessionTimeRemainingUpdated?.Invoke(null);
+                            await RevertToFullTunnelCoreAsync();
+                        }
+                        else
+                        {
+                            SessionTimeRemainingUpdated?.Invoke(remaining);
+
+                            // 5-minute warning toast
+                            if (remaining <= TimeSpan.FromMinutes(5) && !_warningSentForCurrentSession)
+                            {
+                                _warningSentForCurrentSession = true;
+                                string sessionName = _status == TunnelStatus.Paused ? "Pause" : "Split-Tunnel";
+                                int mins = Math.Max(1, (int)Math.Ceiling(remaining.TotalMinutes));
+                                NotificationService.Instance.ShowTimerExpiringWarning(sessionName, mins);
+                            }
                         }
                     }
-                }
 
-                // 2. Check Handshake & Tunnel State
-                await RefreshStatusAsync();
-                await CheckHandshakeWatchdogAsync();
+                    // 2. Check Handshake & Tunnel State
+                    await RefreshStatusCoreAsync();
+                    await CheckHandshakeWatchdogCoreAsync();
+                }
+                finally
+                {
+                    _watchdogLock.Release();
+                }
             }
             catch (Exception ex)
             {
                 LoggingService.Instance.Error("WatchdogService", "Periodic check error", ex);
             }
+            finally
+            {
+                Interlocked.Exchange(ref _isPeriodicRunning, 0);
+            }
         }
 
         public async Task RefreshStatusAsync()
+        {
+            await _watchdogLock.WaitAsync();
+            try
+            {
+                await RefreshStatusCoreAsync();
+            }
+            finally
+            {
+                _watchdogLock.Release();
+            }
+        }
+
+        private async Task RefreshStatusCoreAsync()
         {
             var config = ConfigManager.Instance.Config;
             var cli = WireGuardCliService.Instance;
@@ -352,9 +397,14 @@ namespace WireFox.Services
             }
         }
 
-        private async Task CheckHandshakeWatchdogAsync()
+        private async Task CheckHandshakeWatchdogCoreAsync()
         {
             var config = ConfigManager.Instance.Config;
+            if (!config.InitialSetupCompleted)
+            {
+                return;
+            }
+
             var cli = WireGuardCliService.Instance;
             string targetInterface = GetEffectiveInterfaceName(config);
 
@@ -432,7 +482,7 @@ namespace WireFox.Services
             {
                 case "pause":
                     LoggingService.Instance.Warning("WatchdogService", "ActionOnFailure='pause'. Pausing tunnel for 15 minutes.");
-                    await PauseTunnelAsync(TimeSpan.FromMinutes(15));
+                    await PauseTunnelCoreAsync(TimeSpan.FromMinutes(15));
                     NotificationService.Instance.ShowNotification("VPN Paused (Traffic Blocked)", 
                         $"Tunnel '{targetInterface}' was paused for 15 minutes because network traffic was blocked.");
                     break;
@@ -453,14 +503,14 @@ namespace WireFox.Services
                     {
                         LoggingService.Instance.Warning("WatchdogService", 
                             "Circuit breaker tripped: Repeated tunnel restarts within 3 minutes. Pausing tunnel to avoid loop.");
-                        await PauseTunnelAsync(TimeSpan.FromMinutes(15));
+                        await PauseTunnelCoreAsync(TimeSpan.FromMinutes(15));
                         NotificationService.Instance.ShowNotification("VPN Paused (Network Restrictive)", 
                             "WireGuard was paused for 15 minutes after repeated connection lockups.");
                         return;
                     }
 
                     LoggingService.Instance.Warning("WatchdogService", $"Auto-recovering zombie tunnel '{targetInterface}'...");
-                    await ForceRestartTunnelAsync();
+                    await ForceRestartTunnelCoreAsync();
                     NotificationService.Instance.ShowNotification("WireGuard Restored", 
                         "WireGuard connection was automatically restored after detecting a driver freeze.");
                     break;
@@ -469,6 +519,8 @@ namespace WireFox.Services
 
         private async void OnNotificationAction(string action, string? param)
         {
+            try
+            {
             switch (action)
             {
                 case "pause":
@@ -498,14 +550,22 @@ namespace WireFox.Services
                     break;
 
                 case "enable_vpn":
-                    _isManuallyDisabled = false;
-                    var config = ConfigManager.Instance.Config;
-                    string target = GetEffectiveInterfaceName(config);
-                    var targetProfile = config.GetProfile(target);
-                    await WireGuardCliService.Instance.StartTunnelAsync(target, targetProfile.WireGuardConfigPath);
-                    _tunnelStartedUtc = DateTime.UtcNow;
-                    _blockedWarningSent = false;
-                    await RefreshStatusAsync();
+                    await _watchdogLock.WaitAsync();
+                    try
+                    {
+                        _isManuallyDisabled = false;
+                        var config = ConfigManager.Instance.Config;
+                        string target = GetEffectiveInterfaceName(config);
+                        var targetProfile = config.GetProfile(target);
+                        await WireGuardCliService.Instance.StartTunnelAsync(target, targetProfile.WireGuardConfigPath);
+                        _tunnelStartedUtc = DateTime.UtcNow;
+                        _blockedWarningSent = false;
+                        await RefreshStatusCoreAsync();
+                    }
+                    finally
+                    {
+                        _watchdogLock.Release();
+                    }
                     break;
 
                 case "keep_vpn":
@@ -538,7 +598,7 @@ namespace WireFox.Services
                     break;
 
                 case "open_settings":
-                    System.Windows.Application.Current?.Dispatcher.Invoke(() =>
+                    System.Windows.Application.Current?.Dispatcher.InvokeAsync(() =>
                     {
                         if (System.Windows.Application.Current.MainWindow is Views.MainWindow mainWin)
                         {
@@ -557,6 +617,11 @@ namespace WireFox.Services
                     }
                     break;
             }
+            }
+            catch (Exception ex)
+            {
+                LoggingService.Instance.Error("WatchdogService", "OnNotificationAction error", ex);
+            }
         }
 
         private string? _lastInterface;
@@ -565,6 +630,8 @@ namespace WireFox.Services
 
         private async void OnConfigChanged(AppConfig config)
         {
+            try
+            {
             bool interfaceChanged = !string.Equals(_lastInterface, config.WireGuardInterface, StringComparison.OrdinalIgnoreCase);
             bool networksChanged = _lastTrustedNetworksCount != config.TrustedNetworks.Count ||
                                    _lastTrustedGatewaysCount != config.TrustedGateways.Count;
@@ -577,27 +644,53 @@ namespace WireFox.Services
             // If user switched tunnel in settings while old tunnel was running, switch seamlessly!
             if (interfaceChanged && !string.IsNullOrEmpty(prevInterface) && !string.IsNullOrEmpty(config.WireGuardInterface))
             {
-                var cli = WireGuardCliService.Instance;
-                if (cli.IsTunnelServiceRunning(prevInterface))
+                await _watchdogLock.WaitAsync();
+                try
                 {
-                    LoggingService.Instance.Info("WatchdogService", 
-                        $"Tunnel interface switched from '{prevInterface}' to '{config.WireGuardInterface}'. Switching active service...");
-                    SetStatus(TunnelStatus.Connecting);
-                    await cli.StopTunnelAsync(prevInterface);
-                    _tunnelStartedUtc = DateTime.UtcNow;
-                    _blockedWarningSent = false;
-                    var activeProfile = config.GetProfile(config.WireGuardInterface);
-                    await cli.StartTunnelAsync(config.WireGuardInterface, activeProfile.WireGuardConfigPath);
-                    await RefreshStatusAsync();
-                    return;
+                    var cli = WireGuardCliService.Instance;
+                    if (cli.IsTunnelServiceRunning(prevInterface))
+                    {
+                        LoggingService.Instance.Info("WatchdogService", 
+                            $"Tunnel interface switched from '{prevInterface}' to '{config.WireGuardInterface}'. Switching active service...");
+                        SetStatus(TunnelStatus.Connecting);
+                        await cli.StopTunnelAsync(prevInterface);
+                        _tunnelStartedUtc = DateTime.UtcNow;
+                        _blockedWarningSent = false;
+                        var activeProfile = config.GetProfile(config.WireGuardInterface);
+                        await cli.StartTunnelAsync(config.WireGuardInterface, activeProfile.WireGuardConfigPath);
+                        await RefreshStatusCoreAsync();
+                        return;
+                    }
+                }
+                finally
+                {
+                    _watchdogLock.Release();
                 }
             }
 
             // Always trigger re-evaluation of networks to handle deletions and modifications
             NetworkMonitorService.Instance.TriggerDebouncedEvaluation(TimeSpan.FromMilliseconds(500));
+            }
+            catch (Exception ex)
+            {
+                LoggingService.Instance.Error("WatchdogService", "OnConfigChanged error", ex);
+            }
         }
 
         public async Task PauseTunnelAsync(TimeSpan duration)
+        {
+            await _watchdogLock.WaitAsync();
+            try
+            {
+                await PauseTunnelCoreAsync(duration);
+            }
+            finally
+            {
+                _watchdogLock.Release();
+            }
+        }
+
+        private async Task PauseTunnelCoreAsync(TimeSpan duration)
         {
             var config = ConfigManager.Instance.Config;
             var cli = WireGuardCliService.Instance;
@@ -626,27 +719,48 @@ namespace WireFox.Services
 
         public async Task EnableSplitTunnelAsync(TimeSpan duration)
         {
-            var config = ConfigManager.Instance.Config;
-            var cli = WireGuardCliService.Instance;
-            string targetInterface = GetEffectiveInterfaceName(config);
-            var profile = config.GetProfile(targetInterface);
-
-            _sessionExpiresUtc = DateTime.UtcNow.Add(duration);
-            _warningSentForCurrentSession = false;
-
-            if (!cli.IsTunnelServiceRunning(targetInterface))
+            await _watchdogLock.WaitAsync();
+            try
             {
-                _tunnelStartedUtc = DateTime.UtcNow;
-                _blockedWarningSent = false;
-                await cli.StartTunnelAsync(targetInterface, profile.WireGuardConfigPath);
-            }
+                var config = ConfigManager.Instance.Config;
+                var cli = WireGuardCliService.Instance;
+                string targetInterface = GetEffectiveInterfaceName(config);
+                var profile = config.GetProfile(targetInterface);
 
-            await cli.SetSplitTunnelAllowedIpsAsync(targetInterface, profile.SplitTunnelAllowedIPs);
-            SetStatus(TunnelStatus.SplitTunnel);
-            SessionTimeRemainingUpdated?.Invoke(duration);
+                _sessionExpiresUtc = DateTime.UtcNow.Add(duration);
+                _warningSentForCurrentSession = false;
+
+                if (!cli.IsTunnelServiceRunning(targetInterface))
+                {
+                    _tunnelStartedUtc = DateTime.UtcNow;
+                    _blockedWarningSent = false;
+                    await cli.StartTunnelAsync(targetInterface, profile.WireGuardConfigPath);
+                }
+
+                await cli.SetSplitTunnelAllowedIpsAsync(targetInterface, profile.SplitTunnelAllowedIPs);
+                SetStatus(TunnelStatus.SplitTunnel);
+                SessionTimeRemainingUpdated?.Invoke(duration);
+            }
+            finally
+            {
+                _watchdogLock.Release();
+            }
         }
 
         public async Task RevertToFullTunnelAsync()
+        {
+            await _watchdogLock.WaitAsync();
+            try
+            {
+                await RevertToFullTunnelCoreAsync();
+            }
+            finally
+            {
+                _watchdogLock.Release();
+            }
+        }
+
+        private async Task RevertToFullTunnelCoreAsync()
         {
             var config = ConfigManager.Instance.Config;
             var cli = WireGuardCliService.Instance;
@@ -677,6 +791,19 @@ namespace WireFox.Services
         }
 
         public async Task ForceRestartTunnelAsync()
+        {
+            await _watchdogLock.WaitAsync();
+            try
+            {
+                await ForceRestartTunnelCoreAsync();
+            }
+            finally
+            {
+                _watchdogLock.Release();
+            }
+        }
+
+        private async Task ForceRestartTunnelCoreAsync()
         {
             var config = ConfigManager.Instance.Config;
             var cli = WireGuardCliService.Instance;
@@ -721,66 +848,82 @@ namespace WireFox.Services
 
             await cli.StartTunnelAsync(targetInterface, profile.WireGuardConfigPath);
             await Task.Delay(2000);
-            await RefreshStatusAsync();
+            await RefreshStatusCoreAsync();
         }
 
         public async Task KillAllWireGuardAsync()
         {
-            var cli = WireGuardCliService.Instance;
-            LoggingService.Instance.Warning("WatchdogService", "KillAllWireGuardAsync invoked: force-stopping all tunnels!");
-            _isManuallyDisabled = true;
-            SetStatus(TunnelStatus.Disconnected);
-            await cli.StopAllTunnelsAsync(true);
-            await RefreshStatusAsync();
-            NotificationService.Instance.ShowNotification("WireGuard Force Stopped", 
-                "All WireGuard tunnels and kernel hooks were forcefully stopped. Normal network routing restored.");
+            await _watchdogLock.WaitAsync();
+            try
+            {
+                var cli = WireGuardCliService.Instance;
+                LoggingService.Instance.Warning("WatchdogService", "KillAllWireGuardAsync invoked: force-stopping all tunnels!");
+                _isManuallyDisabled = true;
+                SetStatus(TunnelStatus.Disconnected);
+                await cli.StopAllTunnelsAsync(true);
+                await RefreshStatusCoreAsync();
+                NotificationService.Instance.ShowNotification("WireGuard Force Stopped", 
+                    "All WireGuard tunnels and kernel hooks were forcefully stopped. Normal network routing restored.");
+            }
+            finally
+            {
+                _watchdogLock.Release();
+            }
         }
 
         public async Task ToggleTunnelManualAsync()
         {
-            var config = ConfigManager.Instance.Config;
-            var cli = WireGuardCliService.Instance;
-            string targetInterface = GetEffectiveInterfaceName(config);
-            var profile = config.GetProfile(targetInterface);
-
-            if (cli.IsTunnelServiceRunning(targetInterface))
+            await _watchdogLock.WaitAsync();
+            try
             {
-                // User explicitly turns OFF tunnel
-                _isManuallyDisabled = true;
-                LoggingService.Instance.Info("WatchdogService", $"User manually toggled OFF tunnel '{targetInterface}'");
-                SetStatus(TunnelStatus.Disconnected);
-                await cli.StopTunnelAsync(targetInterface);
-                await RefreshStatusAsync();
-            }
-            else
-            {
-                // User explicitly turns ON tunnel
-                _isManuallyDisabled = false;
-                LoggingService.Instance.Info("WatchdogService", $"User manually toggled ON tunnel '{targetInterface}'");
-                SetStatus(TunnelStatus.Connecting);
+                var config = ConfigManager.Instance.Config;
+                var cli = WireGuardCliService.Instance;
+                string targetInterface = GetEffectiveInterfaceName(config);
+                var profile = config.GetProfile(targetInterface);
 
-                string? confPath = cli.ResolveConfigPath(targetInterface, profile.WireGuardConfigPath);
-                if (string.IsNullOrEmpty(confPath) || !System.IO.File.Exists(confPath))
+                if (cli.IsTunnelServiceRunning(targetInterface))
                 {
-                    LoggingService.Instance.Error("WatchdogService", 
-                        $"No configuration file (.conf) found for '{targetInterface}'. Please choose one in Settings.");
-                    NotificationService.Instance.ShowNotification("Configuration Missing", 
-                        $"Could not find a .conf file for '{targetInterface}'. Please select one in Settings.");
+                    // User explicitly turns OFF tunnel
+                    _isManuallyDisabled = true;
+                    LoggingService.Instance.Info("WatchdogService", $"User manually toggled OFF tunnel '{targetInterface}'");
                     SetStatus(TunnelStatus.Disconnected);
-                    return;
-                }
-
-                _tunnelStartedUtc = DateTime.UtcNow;
-                _blockedWarningSent = false;
-                bool started = await cli.StartTunnelAsync(targetInterface, confPath);
-                if (!started)
-                {
-                    SetStatus(TunnelStatus.Disconnected);
+                    await cli.StopTunnelAsync(targetInterface);
+                    await RefreshStatusCoreAsync();
                 }
                 else
                 {
-                    await RefreshStatusAsync();
+                    // User explicitly turns ON tunnel
+                    _isManuallyDisabled = false;
+                    LoggingService.Instance.Info("WatchdogService", $"User manually toggled ON tunnel '{targetInterface}'");
+                    SetStatus(TunnelStatus.Connecting);
+
+                    string? confPath = cli.ResolveConfigPath(targetInterface, profile.WireGuardConfigPath);
+                    if (string.IsNullOrEmpty(confPath) || !System.IO.File.Exists(confPath))
+                    {
+                        LoggingService.Instance.Error("WatchdogService", 
+                            $"No configuration file (.conf) found for '{targetInterface}'. Please choose one in Settings.");
+                        NotificationService.Instance.ShowNotification("Configuration Missing", 
+                            $"Could not find a .conf file for '{targetInterface}'. Please select one in Settings.");
+                        SetStatus(TunnelStatus.Disconnected);
+                        return;
+                    }
+
+                    _tunnelStartedUtc = DateTime.UtcNow;
+                    _blockedWarningSent = false;
+                    bool started = await cli.StartTunnelAsync(targetInterface, confPath);
+                    if (!started)
+                    {
+                        SetStatus(TunnelStatus.Disconnected);
+                    }
+                    else
+                    {
+                        await RefreshStatusCoreAsync();
+                    }
                 }
+            }
+            finally
+            {
+                _watchdogLock.Release();
             }
         }
 

@@ -108,8 +108,8 @@ namespace WireFox.Services
                 string? exePath = Environment.ProcessPath;
                 if (!string.IsNullOrEmpty(exePath) && File.Exists(exePath))
                 {
-                    byte[] bytes = File.ReadAllBytes(exePath);
-                    byte[] hash = SHA256.HashData(bytes);
+                    using var fs = File.OpenRead(exePath);
+                    byte[] hash = SHA256.HashData(fs);
                     _cachedLocalHash = Convert.ToHexString(hash).ToLowerInvariant();
                     return _cachedLocalHash;
                 }

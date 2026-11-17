@@ -28,6 +28,7 @@ namespace WireFox.Views
         private ToolStripMenuItem? _pauseTrayMenuItem;
         private ToolStripMenuItem? _splitTunnelTrayMenuItem;
         private ToolStripMenuItem? _fullTunnelTrayMenuItem;
+        private AboutWindow? _aboutWindow;
 
         public MainWindow()
         {
@@ -65,16 +66,29 @@ namespace WireFox.Views
             var contextMenu = new ContextMenuStrip();
             contextMenu.Items.Add("Open WireFox", null, (s, e) => ShowAndRestore());
             contextMenu.Items.Add(new ToolStripSeparator());
-            contextMenu.Items.Add("Kill WireGuard (Force Stop)", null, async (s, e) => await WatchdogService.Instance.KillAllWireGuardAsync());
-            contextMenu.Items.Add(new ToolStripSeparator());
-            _pauseTrayMenuItem = new ToolStripMenuItem("Pause VPN (15 Mins)", null, async (s, e) => await OnTrayPauseToggleClicked());
+            _pauseTrayMenuItem = new ToolStripMenuItem("Pause VPN (15 Mins)", null, (s, e) => _ = Task.Run(async () => await OnTrayPauseToggleClicked()));
             contextMenu.Items.Add(_pauseTrayMenuItem);
-            _splitTunnelTrayMenuItem = new ToolStripMenuItem("Split-Tunnel (15 Mins)", null, async (s, e) => await WatchdogService.Instance.EnableSplitTunnelAsync(TimeSpan.FromMinutes(15)));
+            _splitTunnelTrayMenuItem = new ToolStripMenuItem("Split-Tunnel (15 Mins)", null, (s, e) => _ = Task.Run(async () => await WatchdogService.Instance.EnableSplitTunnelAsync(TimeSpan.FromMinutes(15))));
             contextMenu.Items.Add(_splitTunnelTrayMenuItem);
-            _fullTunnelTrayMenuItem = new ToolStripMenuItem("Restart Tunnel", null, async (s, e) => await OnTrayFullTunnelActionClicked());
+            _fullTunnelTrayMenuItem = new ToolStripMenuItem("Restart Tunnel", null, (s, e) => _ = Task.Run(async () => await OnTrayFullTunnelActionClicked()));
             contextMenu.Items.Add(_fullTunnelTrayMenuItem);
             contextMenu.Items.Add(new ToolStripSeparator());
+
+            var restartMenu = new ToolStripMenuItem("Restart");
+            restartMenu.DropDownItems.Add("Restart WireFox", null, (s, e) => _ = RestartApplicationAsync(restartWireGuard: false));
+            restartMenu.DropDownItems.Add("Restart WireFox + WireGuard", null, (s, e) => _ = RestartApplicationAsync(restartWireGuard: true));
+            contextMenu.Items.Add(restartMenu);
+
+            var aboutMenu = new ToolStripMenuItem("About");
+            aboutMenu.DropDownItems.Add("About WireFox", null, (s, e) => ShowAboutWindow());
+            aboutMenu.DropDownItems.Add("GitHub Repository", null, (s, e) => OpenUrl("https://github.com/TalviFox/WireFox"));
+            contextMenu.Items.Add(aboutMenu);
+
             contextMenu.Items.Add("Exit", null, (s, e) => ExitApplication());
+
+            contextMenu.Opened += (s, e) => EnsureMenuAboveTaskbar(contextMenu, clampToWorkingArea: true);
+            restartMenu.DropDown.Opened += (s, e) => EnsureMenuAboveTaskbar(restartMenu.DropDown, clampToWorkingArea: false);
+            aboutMenu.DropDown.Opened += (s, e) => EnsureMenuAboveTaskbar(aboutMenu.DropDown, clampToWorkingArea: false);
 
             _trayIcon.ContextMenuStrip = contextMenu;
             _trayIcon.DoubleClick += (s, e) => ShowAndRestore();
@@ -128,8 +142,16 @@ namespace WireFox.Views
                 switch (status)
                 {
                     case TunnelStatus.Connected:
-                        targetIcon = _greenIcon ?? _defaultIcon;
-                        statusSummary = $"Protected ({currentTunnel})";
+                        if (netState.IsEvaluated && !netState.IsConnected)
+                        {
+                            targetIcon = _grayIcon ?? _defaultIcon;
+                            statusSummary = "Tunnel Ready (Offline)";
+                        }
+                        else
+                        {
+                            targetIcon = _greenIcon ?? _defaultIcon;
+                            statusSummary = $"Protected ({currentTunnel})";
+                        }
                         break;
 
                     case TunnelStatus.Bypassed:
@@ -427,9 +449,51 @@ namespace WireFox.Views
         [DllImport("user32.dll")]
         private static extern bool IsIconic(IntPtr hWnd);
 
+        [DllImport("user32.dll", SetLastError = true)]
+        private static extern bool SetWindowPos(IntPtr hWnd, IntPtr hWndInsertAfter, int X, int Y, int cx, int cy, uint uFlags);
+
+        private static readonly IntPtr HWND_TOPMOST = new(-1);
+        private const uint SWP_NOSIZE = 0x0001;
+        private const uint SWP_NOMOVE = 0x0002;
+        private const uint SWP_NOACTIVATE = 0x0010;
+
         private const int SW_RESTORE = 9;
         private const int SW_SHOW = 5;
         private uint _taskbarCreatedMsg;
+
+        private static void EnsureMenuAboveTaskbar(ToolStripDropDown menu, bool clampToWorkingArea)
+        {
+            try
+            {
+                if (clampToWorkingArea)
+                {
+                    var workingArea = Screen.FromPoint(System.Windows.Forms.Cursor.Position).WorkingArea;
+                    int left = menu.Left;
+                    int top = menu.Top;
+
+                    if (menu.Bottom > workingArea.Bottom - 4)
+                        top = Math.Max(workingArea.Top + 4, workingArea.Bottom - menu.Height - 4);
+                    if (top < workingArea.Top + 4)
+                        top = workingArea.Top + 4;
+
+                    if (menu.Right > workingArea.Right - 4)
+                        left = Math.Max(workingArea.Left + 4, workingArea.Right - menu.Width - 4);
+                    if (left < workingArea.Left + 4)
+                        left = workingArea.Left + 4;
+
+                    if (left != menu.Left || top != menu.Top)
+                    {
+                        menu.Location = new System.Drawing.Point(left, top);
+                    }
+                }
+
+                if (menu.IsHandleCreated && menu.Handle != IntPtr.Zero)
+                {
+                    SetWindowPos(menu.Handle, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
+                }
+            }
+            catch { }
+        }
 
         protected override void OnSourceInitialized(EventArgs e)
         {
@@ -516,6 +580,93 @@ namespace WireFox.Views
             catch (Exception ex)
             {
                 LoggingService.Instance.Error("MainWindow", "Failed to navigate to settings", ex);
+            }
+        }
+
+        private void ShowAboutWindow()
+        {
+            Dispatcher.InvokeAsync(() =>
+            {
+                try
+                {
+                    if (_aboutWindow != null && _aboutWindow.IsLoaded)
+                    {
+                        if (_aboutWindow.WindowState == WindowState.Minimized)
+                        {
+                            _aboutWindow.WindowState = WindowState.Normal;
+                        }
+                        _aboutWindow.Activate();
+                        _aboutWindow.Topmost = true;
+                        _aboutWindow.Topmost = false;
+                        return;
+                    }
+
+                    _aboutWindow = new AboutWindow(_viewModel.SettingsVM)
+                    {
+                        Icon = Icon
+                    };
+                    _aboutWindow.Closed += (_, _) => _aboutWindow = null;
+                    _aboutWindow.Show();
+                    _aboutWindow.Activate();
+                }
+                catch (Exception ex)
+                {
+                    LoggingService.Instance.Debug("MainWindow", $"ShowAboutWindow error: {ex.Message}");
+                }
+            });
+        }
+
+        private static void OpenUrl(string url)
+        {
+            try
+            {
+                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+                {
+                    FileName = url,
+                    UseShellExecute = true
+                });
+            }
+            catch (Exception ex)
+            {
+                LoggingService.Instance.Debug("MainWindow", $"OpenUrl error: {ex.Message}");
+            }
+        }
+
+        private async Task RestartApplicationAsync(bool restartWireGuard)
+        {
+            try
+            {
+                if (restartWireGuard)
+                {
+                    await Task.Run(async () => await WatchdogService.Instance.ForceRestartTunnelAsync());
+                }
+
+                await Dispatcher.InvokeAsync(() =>
+                {
+                    _isExplicitExit = true;
+                    CleanupSubscriptions();
+                    _trayIcon.Visible = false;
+                    _trayIcon.Dispose();
+                    WatchdogService.Instance.Stop();
+                    App.ReleaseSingleInstanceResources();
+
+                    string? exePath = Environment.ProcessPath;
+                    if (!string.IsNullOrEmpty(exePath))
+                    {
+                        System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+                        {
+                            FileName = exePath,
+                            UseShellExecute = true
+                        });
+                    }
+
+                    Close();
+                    System.Windows.Application.Current.Shutdown();
+                });
+            }
+            catch (Exception ex)
+            {
+                LoggingService.Instance.Error("MainWindow", "Failed to restart WireFox", ex);
             }
         }
 

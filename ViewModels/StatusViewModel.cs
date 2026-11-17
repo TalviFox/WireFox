@@ -101,22 +101,42 @@ namespace WireFox.ViewModels
         public bool HasGateway
         {
             get => _hasGateway;
-            set => SetProperty(ref _hasGateway, value);
+            set
+            {
+                if (SetProperty(ref _hasGateway, value))
+                {
+                    OnPropertyChanged(nameof(HasConnectionDetails));
+                }
+            }
         }
 
         private bool _hasAp;
         public bool HasAp
         {
             get => _hasAp;
-            set => SetProperty(ref _hasAp, value);
+            set
+            {
+                if (SetProperty(ref _hasAp, value))
+                {
+                    OnPropertyChanged(nameof(HasConnectionDetails));
+                }
+            }
         }
 
         private bool _hasDns;
         public bool HasDns
         {
             get => _hasDns;
-            set => SetProperty(ref _hasDns, value);
+            set
+            {
+                if (SetProperty(ref _hasDns, value))
+                {
+                    OnPropertyChanged(nameof(HasConnectionDetails));
+                }
+            }
         }
+
+        public bool HasConnectionDetails => _hasGateway || _hasAp || _hasDns;
 
         public string HandshakeAgeText
         {
@@ -314,7 +334,7 @@ namespace WireFox.ViewModels
             UntrustCurrentNetworkCommand = new RelayCommand(OnUntrustCurrentNetwork);
             UpdateGatewayMacCommand = new RelayCommand(OnUpdateGatewayMac);
             PauseToggleCommand = new RelayCommand(OnPauseToggleClicked);
-            SplitTunnel15Command = new RelayCommand(async () => await WatchdogService.Instance.EnableSplitTunnelAsync(TimeSpan.FromMinutes(15)));
+            SplitTunnel15Command = new RelayCommand(OnSplitTunnelClicked);
             FullTunnelActionCommand = new RelayCommand(OnFullTunnelActionClicked);
 
             WatchdogService.Instance.StatusChanged += OnStatusChanged;
@@ -339,6 +359,10 @@ namespace WireFox.ViewModels
             {
                 await WatchdogService.Instance.ToggleTunnelManualAsync();
             }
+            catch (Exception ex)
+            {
+                LoggingService.Instance.Error("StatusViewModel", "ToggleTunnel error", ex);
+            }
             finally
             {
                 IsBusy = false;
@@ -356,9 +380,18 @@ namespace WireFox.ViewModels
             switch (status)
             {
                 case TunnelStatus.Connected:
-                    StatusText = "Connected";
-                    StatusSymbol = SymbolRegular.ShieldCheckmark24;
-                    StatusImage = _greenSource;
+                    if (netState.IsEvaluated && !netState.IsConnected)
+                    {
+                        StatusText = "Tunnel Ready (Offline)";
+                        StatusSymbol = SymbolRegular.ShieldCheckmark24;
+                        StatusImage = _graySource;
+                    }
+                    else
+                    {
+                        StatusText = "Connected";
+                        StatusSymbol = SymbolRegular.ShieldCheckmark24;
+                        StatusImage = _greenSource;
+                    }
                     IsTunnelActive = true;
                     IsSessionActive = false;
                     break;
@@ -515,15 +548,34 @@ namespace WireFox.ViewModels
             }
         }
 
+        private async void OnSplitTunnelClicked()
+        {
+            try
+            {
+                await WatchdogService.Instance.EnableSplitTunnelAsync(TimeSpan.FromMinutes(15));
+            }
+            catch (Exception ex)
+            {
+                LoggingService.Instance.Error("StatusViewModel", "EnableSplitTunnel error", ex);
+            }
+        }
+
         private async void OnFullTunnelActionClicked()
         {
-            if (WatchdogService.Instance.Status == TunnelStatus.SplitTunnel)
+            try
             {
-                await WatchdogService.Instance.RevertToFullTunnelAsync();
+                if (WatchdogService.Instance.Status == TunnelStatus.SplitTunnel)
+                {
+                    await WatchdogService.Instance.RevertToFullTunnelAsync();
+                }
+                else
+                {
+                    await WatchdogService.Instance.RestartTunnelAsync();
+                }
             }
-            else
+            catch (Exception ex)
             {
-                await WatchdogService.Instance.RestartTunnelAsync();
+                LoggingService.Instance.Error("StatusViewModel", "FullTunnelAction error", ex);
             }
         }
 
@@ -534,13 +586,20 @@ namespace WireFox.ViewModels
 
         private async void OnPauseToggleClicked()
         {
-            if (WatchdogService.Instance.Status == TunnelStatus.Paused)
+            try
             {
-                await WatchdogService.Instance.RevertToFullTunnelAsync();
+                if (WatchdogService.Instance.Status == TunnelStatus.Paused)
+                {
+                    await WatchdogService.Instance.RevertToFullTunnelAsync();
+                }
+                else
+                {
+                    await WatchdogService.Instance.PauseTunnelAsync(TimeSpan.FromMinutes(15));
+                }
             }
-            else
+            catch (Exception ex)
             {
-                await WatchdogService.Instance.PauseTunnelAsync(TimeSpan.FromMinutes(15));
+                LoggingService.Instance.Error("StatusViewModel", "PauseToggle error", ex);
             }
         }
 
@@ -598,7 +657,14 @@ namespace WireFox.ViewModels
             {
                 CurrentNetworkText = "No Network Connection";
                 GatewayInfoText = string.Empty;
+                GatewayValue = string.Empty;
+                ApValue = string.Empty;
+                DnsValue = string.Empty;
+                HasGateway = false;
+                HasAp = false;
+                HasDns = false;
                 CanTrustCurrentNetwork = false;
+                CanUntrustCurrentNetwork = false;
                 IsMacMismatch = false;
                 return;
             }

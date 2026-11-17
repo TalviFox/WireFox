@@ -1,0 +1,23 @@
+<ui:FluentWindow x:Class="WireFox.Views.AboutWindow"
+                 xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                 xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+                 xmlns:views="clr-namespace:WireFox.Views"
+                 Title="About WireFox"
+                 Width="620"
+                 SizeToContent="Height"
+                 ResizeMode="NoResize"
+                 WindowStartupLocation="CenterScreen"
+                 ExtendsContentIntoTitleBar="True"
+                 WindowBackdropType="Mica">
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <ui:TitleBar Grid.Row="0" Title="About • FoxDen Software" ShowMaximize="False" ShowMinimize="False" />
+
+        <views:AboutCard Grid.Row="1" Margin="20,12,20,20" />
+    </Grid>
+</ui:FluentWindow>

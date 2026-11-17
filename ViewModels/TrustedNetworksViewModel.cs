@@ -93,7 +93,7 @@ namespace WireFox.ViewModels
 
         private void OnConfigChanged(AppConfig config)
         {
-            _dispatcher.Invoke(() =>
+            _dispatcher.InvokeAsync(() =>
             {
                 TrustedNetworks.Clear();
                 foreach (var ssid in config.TrustedNetworks)

@@ -60,6 +60,9 @@ namespace WireFox.Models
         [JsonPropertyName("has_prompted_portable_install")]
         public bool HasPromptedPortableInstall { get; set; } = false;
 
+        [JsonPropertyName("debug_logging")]
+        public bool DebugLogging { get; set; } = false;
+
         public TunnelProfile GetProfile(string? tunnelName)
         {
             string key = string.IsNullOrWhiteSpace(tunnelName)

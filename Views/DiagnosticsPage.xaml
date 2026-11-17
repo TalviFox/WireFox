@@ -15,7 +15,19 @@
         </Grid.RowDefinitions>
 
         <!-- Page Header -->
-        <ui:TextBlock Grid.Row="0" Text="Diagnostics &amp; Logs" FontSize="28" FontWeight="SemiBold" Margin="0,0,0,16" Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
+        <Grid Grid.Row="0" Margin="0,0,0,16">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <ui:TextBlock Grid.Column="0" Text="Diagnostics &amp; Logs" FontSize="28" FontWeight="SemiBold" VerticalAlignment="Center" Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
+            <ui:ToggleSwitch Grid.Column="1"
+                             Content="Debug Logging"
+                             IsChecked="{Binding IsDebugLoggingEnabled, Mode=TwoWay}"
+                             VerticalAlignment="Center"
+                             HorizontalAlignment="Right"
+                             ToolTip="Include verbose 8-second watchdog and network trace events in logs" />
+        </Grid>
 
         <!-- System Summary Cards -->
         <Grid Grid.Row="1" Margin="0,0,0,16">
@@ -59,11 +71,11 @@
         </Grid>
 
         <!-- Actions Toolbar -->
-        <StackPanel Grid.Row="2" Orientation="Horizontal" Margin="0,0,0,12">
+        <WrapPanel Grid.Row="2" Orientation="Horizontal" Margin="0,0,0,8">
             <ui:Button Appearance="Primary"
                        Content="Run Diagnostic Scan"
                        Command="{Binding RunScanCommand}"
-                       Margin="0,0,8,0">
+                       Margin="0,0,8,4">
                 <ui:Button.Icon>
                     <ui:SymbolIcon Symbol="ArrowSync24" />
                 </ui:Button.Icon>
@@ -72,7 +84,7 @@
             <ui:Button Appearance="Secondary"
                        Content="Copy Logs"
                        Command="{Binding CopyLogsCommand}"
-                       Margin="0,0,8,0">
+                       Margin="0,0,8,4">
                 <ui:Button.Icon>
                     <ui:SymbolIcon Symbol="Copy24" />
                 </ui:Button.Icon>
@@ -81,7 +93,7 @@
             <ui:Button Appearance="Secondary"
                        Content="Open Log File"
                        Command="{Binding OpenLogFileCommand}"
-                       Margin="0,0,8,0">
+                       Margin="0,0,8,4">
                 <ui:Button.Icon>
                     <ui:SymbolIcon Symbol="DocumentText24" />
                 </ui:Button.Icon>
@@ -89,12 +101,13 @@
 
             <ui:Button Appearance="Secondary"
                        Content="Clear"
-                       Command="{Binding ClearLogsCommand}">
+                       Command="{Binding ClearLogsCommand}"
+                       Margin="0,0,0,4">
                 <ui:Button.Icon>
                     <ui:SymbolIcon Symbol="Delete24" />
                 </ui:Button.Icon>
             </ui:Button>
-        </StackPanel>
+        </WrapPanel>
 
         <!-- Live Log Console -->
         <Border Grid.Row="3" 
@@ -115,7 +128,7 @@
                     <DataTemplate>
                         <Grid Margin="0,2,0,2">
                             <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="90" />
+                                <ColumnDefinition Width="100" />
                                 <ColumnDefinition Width="70" />
                                 <ColumnDefinition Width="130" />
                                 <ColumnDefinition Width="*" />

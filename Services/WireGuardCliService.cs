@@ -274,6 +274,34 @@ namespace WireFox.Services
 
         public string GetServiceName(string interfaceName) => $"WireGuardTunnel${interfaceName}";
 
+        private static string? RunWgWithTimeout(string wgExePath, string arguments, int timeoutMs = 3000)
+        {
+            var psi = new ProcessStartInfo
+            {
+                FileName = wgExePath,
+                Arguments = arguments,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                UseShellExecute = false,
+                CreateNoWindow = true
+            };
+
+            using var proc = Process.Start(psi);
+            if (proc == null) return null;
+
+            var stdoutTask = proc.StandardOutput.ReadToEndAsync();
+            _ = proc.StandardError.ReadToEndAsync();
+
+            if (!proc.WaitForExit(timeoutMs))
+            {
+                try { proc.Kill(true); } catch { }
+                LoggingService.Instance.Warning("WireGuardCli", $"wg.exe timed out after {timeoutMs}ms (args: {arguments}); terminated hung process.");
+                return null;
+            }
+
+            return stdoutTask.GetAwaiter().GetResult();
+        }
+
         /// <summary>
         /// Queries wg.exe for actively running interfaces in the kernel.
         /// </summary>
@@ -285,32 +313,16 @@ namespace WireFox.Services
             {
                 try
                 {
-                    var psi = new ProcessStartInfo
+                    string? output = RunWgWithTimeout(_wgExePath, "show interfaces", 3000);
+                    if (!string.IsNullOrWhiteSpace(output))
                     {
-                        FileName = _wgExePath,
-                        Arguments = "show interfaces",
-                        RedirectStandardOutput = true,
-                        RedirectStandardError = true,
-                        UseShellExecute = false,
-                        CreateNoWindow = true
-                    };
-
-                    using var proc = Process.Start(psi);
-                    if (proc != null)
-                    {
-                        string output = proc.StandardOutput.ReadToEnd();
-                        proc.WaitForExit(3000);
-
-                        if (!string.IsNullOrWhiteSpace(output))
+                        var names = output.Split(new[] { ' ', '\r', '\n', '\t' }, StringSplitOptions.RemoveEmptyEntries);
+                        foreach (var n in names)
                         {
-                            var names = output.Split(new[] { ' ', '\r', '\n', '\t' }, StringSplitOptions.RemoveEmptyEntries);
-                            foreach (var n in names)
+                            string trimmed = n.Trim();
+                            if (IsValidInterfaceName(trimmed))
                             {
-                                string trimmed = n.Trim();
-                                if (IsValidInterfaceName(trimmed))
-                                {
-                                    active.Add(trimmed);
-                                }
+                                active.Add(trimmed);
                             }
                         }
                     }
@@ -948,22 +960,7 @@ namespace WireFox.Services
             {
                 try
                 {
-                    var psi = new ProcessStartInfo
-                    {
-                        FileName = _wgExePath,
-                        Arguments = $"show \"{interfaceName}\" dump",
-                        RedirectStandardOutput = true,
-                        RedirectStandardError = true,
-                        UseShellExecute = false,
-                        CreateNoWindow = true
-                    };
-
-                    using var proc = Process.Start(psi);
-                    if (proc == null) return info;
-
-                    string output = proc.StandardOutput.ReadToEnd();
-                    proc.WaitForExit(3000);
-
+                    string? output = RunWgWithTimeout(_wgExePath, $"show \"{interfaceName}\" dump", 3000);
                     if (!string.IsNullOrWhiteSpace(output))
                     {
                         var lines = output.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries);
@@ -1015,20 +1012,10 @@ namespace WireFox.Services
             {
                 try
                 {
-                    var psi = new ProcessStartInfo
-                    {
-                        FileName = _wgExePath,
-                        Arguments = $"show \"{interfaceName}\" peers",
-                        RedirectStandardOutput = true,
-                        UseShellExecute = false,
-                        CreateNoWindow = true
-                    };
-
-                    using var proc = Process.Start(psi);
-                    if (proc == null) return false;
-
-                    string peerKey = proc.StandardOutput.ReadLine()?.Trim() ?? string.Empty;
-                    proc.WaitForExit(3000);
+                    string? peersOutput = RunWgWithTimeout(_wgExePath, $"show \"{interfaceName}\" peers", 3000);
+                    string peerKey = peersOutput?
+                        .Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries)
+                        .FirstOrDefault()?.Trim() ?? string.Empty;
 
                     if (string.IsNullOrEmpty(peerKey)) return false;
 

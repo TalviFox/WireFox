@@ -45,6 +45,9 @@ namespace WireFox.Services
         private readonly object _lock = new();
         private readonly string _logFilePath;
         private const int MaxLogEntries = 500;
+        private const long MaxLogFileBytes = 5 * 1024 * 1024; // 5 MB rollover cap
+
+        public bool IsDebugEnabled { get; set; } = false;
 
         public ObservableCollection<LogEntry> Entries { get; } = new();
 
@@ -69,6 +72,12 @@ namespace WireFox.Services
 
         public void Log(LogLevel level, string category, string message, string? details = null)
         {
+            if (level == LogLevel.Debug && !IsDebugEnabled)
+            {
+                System.Diagnostics.Debug.WriteLine($"[{DateTime.Now:HH:mm:ss.fff}] [DEBUG] [{category}] {message}");
+                return;
+            }
+
             var entry = new LogEntry
             {
                 Timestamp = DateTime.Now,
@@ -90,6 +99,10 @@ namespace WireFox.Services
 
                 lock (_lock)
                 {
+                    if (File.Exists(_logFilePath) && new FileInfo(_logFilePath).Length > MaxLogFileBytes)
+                    {
+                        File.Move(_logFilePath, _logFilePath + ".old", overwrite: true);
+                    }
                     File.AppendAllText(_logFilePath, line);
                 }
             }
@@ -126,7 +139,7 @@ namespace WireFox.Services
             var app = System.Windows.Application.Current;
             if (app != null)
             {
-                app.Dispatcher.Invoke(() => Entries.Clear());
+                app.Dispatcher.InvokeAsync(() => Entries.Clear());
             }
             else
             {
