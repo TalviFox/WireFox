@@ -145,6 +145,7 @@ WireFox source code is available under the **[PolyForm Perimeter License 1.0.0](
 ### What this means:
 * ✅ **Open to inspect, fork, and hack:** You are free to run, study, modify, build, and distribute WireFox for personal, educational, or internal use.
 * 🛡️ **Anti-theft & non-compete protection:** You may not use this software or its source code to provide or market any product or service that competes with WireFox or acts as a commercial substitute for it.
+* ⚠️ **Provided "AS IS":** WireFox is provided without warranty of any kind; see the [LICENSE](LICENSE) for full liability terms.
 
 For full license terms, see the [LICENSE](LICENSE) file or visit [PolyForm Project](https://polyformproject.org/licenses/perimeter/1.0.0).
 
