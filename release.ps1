@@ -54,7 +54,8 @@ if (-not $Version) {
 $cleanVersion = $Version.Trim().TrimStart('v', 'V')
 Write-Host "[*] Target Release Version: v$cleanVersion" -ForegroundColor Cyan
 
-# 2. Update WireFox.csproj Version
+# 2. Update WireFox.csproj & install.ps1 Versions
+$utf8NoBom = New-Object System.Text.UTF8Encoding($false)
 if (-not $DryRun) {
     Write-Host "[*] Updating version tags in WireFox.csproj..." -ForegroundColor Cyan
     $csprojContent = Get-Content $csprojPath -Raw
@@ -62,6 +63,18 @@ if (-not $DryRun) {
     $csprojContent = [regex]::Replace($csprojContent, "<FileVersion>.*?</FileVersion>", "<FileVersion>$cleanVersion</FileVersion>")
     $csprojContent = [regex]::Replace($csprojContent, "<AssemblyVersion>.*?</AssemblyVersion>", "<AssemblyVersion>$cleanVersion</AssemblyVersion>")
     Set-Content -Path $csprojPath -Value $csprojContent -Encoding UTF8
+
+    $installPath = Join-Path $root "install.ps1"
+    if (Test-Path $installPath) {
+        Write-Host "[*] Updating banner version in install.ps1..." -ForegroundColor Cyan
+        $installContent = [System.IO.File]::ReadAllText($installPath, $utf8NoBom)
+        $installUpdated = [regex]::Replace(
+            $installContent,
+            '(WireFox\$esc\[0m \$esc\[1;34mv)[0-9]+\.[0-9]+\.[0-9]+',
+            "`${1}$cleanVersion"
+        )
+        [System.IO.File]::WriteAllText($installPath, $installUpdated, $utf8NoBom)
+    }
 }
 
 # 3. Locate .NET SDK
@@ -150,7 +163,7 @@ Write-Host "[+] Checksums file:      $checksumsFile" -ForegroundColor Green
 if (-not $DryRun -and -not $SkipGit) {
     try {
         Write-Host "[*] Creating Git release commit and tag v$cleanVersion..." -ForegroundColor Cyan
-        git add WireFox.csproj
+        git add WireFox.csproj install.ps1 CHANGELOG.md 2>$null
         git commit -m "Release v$cleanVersion" -ErrorAction SilentlyContinue
         git tag -a "v$cleanVersion" -m "WireFox Release v$cleanVersion"
         Write-Host "[+] Git tag 'v$cleanVersion' created." -ForegroundColor Green
@@ -230,6 +243,20 @@ if ($existingNotes -and $existingNotes -match "(?m)^## .*What's New in v$cleanVe
     [System.IO.File]::WriteAllText($releaseNotesPath, $updatedNotes, $utf8NoBom)
     Write-Host "[+] Updated checksums in existing release notes at $releaseNotesPath" -ForegroundColor Green
 } else {
+    $whatsNewBody = "- **<Feature or Fix>:** <Detailed description of changes made in this release>"
+    $changelogPath = Join-Path $root "CHANGELOG.md"
+    if (Test-Path $changelogPath) {
+        $changelogContent = [System.IO.File]::ReadAllText($changelogPath, $utf8NoBom)
+        $escapedVer = [regex]::Escape($cleanVersion)
+        $sectionMatch = [regex]::Match($changelogContent, "(?ms)^## \[v$escapedVer\][^\r\n]*\r?\n(.*?)(?=^\s*---\s*$|^## \[|\z)")
+        if ($sectionMatch.Success) {
+            $bullets = ($sectionMatch.Groups[1].Value -split "`r?`n" | Where-Object { $_ -match '^\s*\*\s+' } | ForEach-Object { $_ -replace '^\s*\*\s+', '- ' }) -join "`r`n"
+            if (-not [string]::IsNullOrWhiteSpace($bullets)) {
+                $whatsNewBody = $bullets
+            }
+        }
+    }
+
     $releaseNotesTemplate = @"
 # $foxEmoji WireFox v$cleanVersion
 
@@ -237,7 +264,7 @@ WireFox bridges the missing link of WireGuard on Windows: intelligent background
 
 ## $memoEmoji What's New in v$cleanVersion
 
-- **<Feature or Fix>:** <Detailed description of changes made in this release>
+$whatsNewBody
 
 Run PowerShell as Administrator to install or seamlessly upgrade in place:
 

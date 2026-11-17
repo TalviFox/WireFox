@@ -277,6 +277,7 @@ namespace WireFox
             }
 
             var theme = ConfigManager.Instance.Config.Theme?.ToLowerInvariant() ?? "system";
+            LoggingService.Instance.IsDebugEnabled = ConfigManager.Instance.Config.DebugLogging;
             if (theme == "light")
                 Wpf.Ui.Appearance.ApplicationThemeManager.Apply(Wpf.Ui.Appearance.ApplicationTheme.Light);
             else if (theme == "dark")
@@ -351,9 +352,8 @@ namespace WireFox
             }
         }
 
-        protected override void OnExit(ExitEventArgs e)
+        public static void ReleaseSingleInstanceResources()
         {
-            WatchdogService.Instance.Stop();
             _registeredWaitHandle?.Unregister(null);
             _registeredWaitHandle = null;
             _showWindowEvent?.Dispose();
@@ -375,6 +375,12 @@ namespace WireFox
             }
             _mutex?.Dispose();
             _mutex = null;
+        }
+
+        protected override void OnExit(ExitEventArgs e)
+        {
+            WatchdogService.Instance.Stop();
+            ReleaseSingleInstanceResources();
             base.OnExit(e);
         }
     }

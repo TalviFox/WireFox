@@ -19,11 +19,11 @@ Run the release script in PowerShell, providing the desired version:
 ```
 
 ### What this script does automatically:
-1. Updates `<Version>1.1.0</Version>` in `WireFox.csproj`.
+1. Updates `<Version>`, `<FileVersion>`, and `<AssemblyVersion>` in `WireFox.csproj` and the banner version in `install.ps1`.
 2. Compiles the single-file self-contained release: `publish\WireFox.exe`.
-3. Computes the SHA-256 hash.
-4. Generates `publish\SHA256SUMS.txt` and `publish\WireFox.exe.sha256`.
-5. Commits `WireFox.csproj` and creates a Git tag: `git tag v1.1.0`.
+3. Computes the SHA-256 hashes for `WireFox.exe`, `uninstall.ps1`, and `verify.ps1`.
+4. Generates `publish\SHA256SUMS.txt`, `publish\WireFox.exe.sha256`, and `publish\release_notes.md` (pulling bullets from `CHANGELOG.md` if `## [v<Version>]` exists).
+5. Commits `WireFox.csproj`, `install.ps1`, and `CHANGELOG.md` and creates a Git tag: `git tag v1.1.0`.
 6. Prints the exact markdown table to copy/paste into your GitHub Release notes.
 
 ---
